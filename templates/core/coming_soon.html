@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}{{ page.title }} — coming soon | CarHub{% endblock %}
+{% block content %}
+<section class="hero" style="min-height:calc(100vh - var(--header-h) - 40px)">
+  <div class="container" style="position:relative;z-index:1;padding-block:96px;max-width:760px;text-align:center">
+    <div style="width:72px;height:72px;border-radius:22px;background:rgba(255,178,30,.15);color:var(--brand);display:grid;place-items:center;margin:0 auto 22px">{% icon page.icon 34 %}</div>
+    <span class="eyebrow" style="color:var(--brand)">Coming soon</span>
+    <h1>{{ page.title }}</h1>
+    <p class="lead" style="margin-inline:auto">{{ page.lead }}</p>
+    <div class="row row-wrap mt-3" style="justify-content:center;gap:10px">
+      {% for point in page.points %}<span class="badge" style="background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.15);height:32px;padding:0 14px">{% icon 'check' 14 %} {{ point }}</span>{% endfor %}
+    </div>
+    <div class="row row-wrap mt-4" style="justify-content:center">
+      <a class="btn btn-primary btn-lg" href="{% url 'cars:browse' %}">Browse cars meanwhile</a>
+      <a class="btn btn-lg" style="--btn-bg:transparent;--btn-fg:#fff;--btn-line:rgba(255,255,255,.3)" href="{% url 'contact' %}">Get notified</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block footer %}{% endblock %}

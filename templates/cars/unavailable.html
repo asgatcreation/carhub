@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Listing unavailable | CarHub{% endblock %}
+{% block content %}
+<div class="error-page">
+  <div>
+    <div class="empty-icon" style="width:72px;height:72px;margin:0 auto 18px;border-radius:22px;background:var(--brand-soft);color:var(--warning);display:grid;place-items:center">{% icon 'car' 34 %}</div>
+    <h1 style="font-size:2rem">This listing isn't available</h1>
+    <p class="muted">It may be under review or no longer for sale. Here are similar cars instead.</p>
+    <a class="btn btn-dark" href="{% url 'cars:browse' %}?brand={{ car.brand|urlencode }}">See other {{ car.brand }} cars</a>
+  </div>
+</div>
+{% endblock %}

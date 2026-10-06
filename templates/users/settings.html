@@ -1,0 +1,43 @@
+{% extends 'users/account_base.html' %}
+{% block title %}Settings | CarHub{% endblock %}
+{% block account_content %}
+<h2>Settings</h2>
+<form method="post" enctype="multipart/form-data" class="card" novalidate>
+  {% csrf_token %}
+  <div class="form-section">
+    <h3>{% icon 'user' 20 %} Personal details</h3>
+    <p>Your name appears on messages and reviews you write.</p>
+    <div class="row mb-2">
+      <span class="avatar avatar-xl">{% if user.profile.avatar_url %}<img src="{{ user.profile.avatar_url }}" alt="">{% else %}{{ user|initials }}{% endif %}</span>
+      <div class="grow">{% include 'partials/field.html' with field=profile_form.profile_image %}</div>
+    </div>
+    <div class="form-grid">
+      {% include 'partials/field.html' with field=account_form.first_name %}
+      {% include 'partials/field.html' with field=account_form.last_name %}
+      <div class="field"><label>Email</label><input type="email" value="{{ user.email }}" disabled><span class="help"><a class="link" href="{% url 'account_email' %}">Manage email addresses</a> · <a class="link" href="{% url 'account_change_password' %}">Change password</a></span></div>
+      {% include 'partials/field.html' with field=profile_form.city %}
+      {% include 'partials/field.html' with field=profile_form.phone %}
+      {% include 'partials/field.html' with field=profile_form.whatsapp_number %}
+      <div class="span-2">{% include 'partials/field.html' with field=profile_form.bio %}</div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h3>{% icon 'tag' 20 %} Seller profile</h3>
+    <p>Shown on your public seller page. Dealers: add your business details to build trust.</p>
+    <div class="form-grid">
+      {% include 'partials/field.html' with field=profile_form.company_name %}
+      {% include 'partials/field.html' with field=profile_form.years_in_business %}
+      <div class="span-2">{% include 'partials/field.html' with field=profile_form.specialization %}</div>
+      <div class="span-2">{% include 'partials/field.html' with field=profile_form.business_description %}</div>
+      <div class="span-2">{% include 'partials/field.html' with field=profile_form.company_logo %}</div>
+      <div class="span-2">{% include 'partials/field.html' with field=profile_form.chat_enabled %}</div>
+    </div>
+  </div>
+
+  <div class="form-section row between row-wrap">
+    <a class="link small" href="{% url 'cars:seller_profile' user.pk %}">{% icon 'external' 14 %} View my public seller page</a>
+    <button type="submit" class="btn btn-dark">Save changes</button>
+  </div>
+</form>
+{% endblock %}

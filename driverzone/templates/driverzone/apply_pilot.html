@@ -1,0 +1,25 @@
+{% extends 'driverzone/base.html' %}
+{% block title %}Apply as Pilot{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0 rounded-4">
+                <div class="card-header bg-primary text-white rounded-top-4">
+                    <h3 class="mb-0">Apply as Pilot</h3>
+                </div>
+                <div class="card-body">
+                    {% if application_submitted %}
+                        <div class="alert alert-success">Application submitted successfully!</div>
+                    {% endif %}
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ application_form.as_p }}
+                        <button type="submit" class="btn btn-primary rounded-pill px-4">Submit Application</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

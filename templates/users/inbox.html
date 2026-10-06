@@ -1,0 +1,34 @@
+{% extends 'users/account_base.html' %}
+{% block title %}Messages | CarHub{% endblock %}
+{% block account_content %}
+<h2>Messages</h2>
+{% if items %}
+  <div class="card">
+    {% for it in items %}
+      <a class="list-item {% if it.convo.unread %}is-unread{% endif %}" href="{% url 'users:conversation' it.convo.pk %}">
+        {% if it.convo.car %}
+          <img src="{{ it.convo.car.thumbnail }}" alt="" style="width:72px;height:52px;border-radius:10px;object-fit:cover" referrerpolicy="no-referrer">
+        {% else %}
+          <span class="avatar avatar-lg">{{ it.other|initials }}</span>
+        {% endif %}
+        <div class="grow" style="min-width:0">
+          <div class="row" style="gap:8px">
+            <strong style="color:var(--ink)">{{ it.other.profile.company_name|default:it.other.get_full_name|default:it.other.email }}</strong>
+            {% if it.convo.unread %}<span class="badge badge-brand">{{ it.convo.unread }} new</span>{% endif %}
+          </div>
+          {% if it.convo.car %}<div class="xs muted">{{ it.convo.car.full_title }}</div>{% endif %}
+          <div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{% if it.last.sender == user %}You: {% endif %}{{ it.last.content }}</div>
+        </div>
+        <div class="meta xs muted">{{ it.last.created_at|ago }}</div>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty">
+    <div class="empty-icon">{% icon 'message' 28 %}</div>
+    <h3>No conversations yet</h3>
+    <p>Message a seller from any car page to ask questions or book an inspection.</p>
+    <a href="{% url 'cars:browse' %}" class="btn btn-dark">Browse cars</a>
+  </div>
+{% endif %}
+{% endblock %}

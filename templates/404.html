@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Page not found | CarHub{% endblock %}
+{% block content %}
+<div class="error-page">
+  <div>
+    <div class="code">404</div>
+    <h1 style="font-size:2rem">Wrong turn</h1>
+    <p class="muted">We couldn't find that page. It may have moved, or the car may have been sold.</p>
+    <div class="row row-wrap" style="justify-content:center">
+      <a class="btn btn-dark" href="{% url 'cars:browse' %}">Browse cars</a>
+      <a class="btn" href="{% url 'home' %}">Go home</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

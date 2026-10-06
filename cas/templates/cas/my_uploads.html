@@ -1,0 +1,28 @@
+{% extends 'cas/base.html' %}
+{% block title %}My Uploads{% endblock %}
+{% block content %}
+    <div class="trodo-card">
+        <h3>My Uploads</h3>
+        {% if uploads %}
+            <div class="trodo-grid">
+                {% for upload in uploads %}
+                    <div class="trodo-card trodo-card-sm">
+                        {% if upload.cover_image %}
+                            <img src="{{ upload.cover_image.url }}" alt="{{ upload.title }}">
+                        {% endif %}
+                        <div class="p-2">
+                            <strong>{{ upload.title }}</strong>
+                            <p class="muted">{{ upload.description|truncatechars:90 }}</p>
+                            <div class="d-flex gap-1">
+                                <a class="btn btn-outline-primary btn-sm" href="{% url 'cas:product_detail' upload.brand.slug upload.slug %}">View</a>
+                                <a class="btn btn-outline-secondary btn-sm" href="{% url 'cas:edit_upload' upload.id %}">Edit</a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>No uploads yet. <a href="{% url 'cas:upload_accessory' %}">Upload your first product</a></p>
+        {% endif %}
+    </div>
+{% endblock %}

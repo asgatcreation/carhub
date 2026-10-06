@@ -1,0 +1,111 @@
+{% load static %}
+{% with path=request.path %}
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="{% url 'home' %}" class="logo" aria-label="CarHub home">
+      {% include 'partials/logo_mark.html' %}
+      <span>Car<em>Hub</em></span>
+    </a>
+
+    <nav class="main-nav" aria-label="Main">
+      <a href="{% url 'cars:browse' %}" class="{% if path == '/cars/' or '/cars/car/' in path %}is-active{% endif %}">Buy a car</a>
+      <a href="{% url 'cars:sell' %}" class="{% if '/cars/sell' in path %}is-active{% endif %}">Sell your car</a>
+      <a href="{% url 'accessories' %}" class="{% if path == '/accessories/' %}is-active{% endif %}">Accessories<span class="soon">Soon</span></a>
+      <a href="{% url 'drivers' %}" class="{% if path == '/drivers/' %}is-active{% endif %}">Hire a driver<span class="soon">Soon</span></a>
+    </nav>
+
+    <form class="header-search" action="{% url 'cars:browse' %}" method="get" role="search" data-suggest>
+      <label class="input-group">
+        {% icon 'search' 18 %}
+        <span class="sr-only">Search cars</span>
+        <input type="search" name="q" placeholder="Search make, model or city" autocomplete="off" value="{% if path == '/cars/' %}{{ request.GET.q }}{% endif %}">
+      </label>
+      <div class="suggest-list" role="listbox"></div>
+    </form>
+
+    <div class="header-actions">
+      <a href="{% url 'cars:saved' %}" class="icon-btn" aria-label="Saved cars" title="Saved cars">
+        {% icon 'heart' 22 %}<span class="count-badge" data-saved-count data-count="{{ saved_count|default:0 }}">{{ saved_count|default:'' }}</span>
+      </a>
+      <a href="{% url 'cars:cart' %}" class="icon-btn" aria-label="Cart" title="Cart">
+        {% icon 'bag' 22 %}<span class="count-badge" data-cart-count data-count="{{ cart_count|default:0 }}">{{ cart_count|default:'' }}</span>
+      </a>
+      {% if user.is_authenticated %}
+        <a href="{% url 'users:inbox' %}" class="icon-btn hide-sm" aria-label="Messages" title="Messages">
+          {% icon 'message' 22 %}<span class="count-badge" data-count="{{ messages_unread_count|default:0 }}">{{ messages_unread_count|default:'' }}</span>
+        </a>
+        <a href="{% url 'users:notifications' %}" class="icon-btn hide-sm" aria-label="Notifications" title="Notifications">
+          {% icon 'bell' 22 %}<span class="count-badge" data-count="{{ notifications_unread_count|default:0 }}">{{ notifications_unread_count|default:'' }}</span>
+        </a>
+        <details class="dropdown hide-sm">
+          <summary class="icon-btn" aria-label="Account menu">
+            <span class="avatar">{% if user.profile.avatar_url %}<img src="{{ user.profile.avatar_url }}" alt="">{% else %}{{ user|initials }}{% endif %}</span>
+          </summary>
+          <div class="dropdown-menu">
+            <div class="menu-head">
+              <strong>{{ user.get_full_name|default:user.email }}</strong>
+              <div class="small muted">{{ user.email }}</div>
+            </div>
+            <a href="{% url 'users:dashboard' %}">{% icon 'dashboard' 18 %} Dashboard</a>
+            <a href="{% url 'cars:orders' %}">{% icon 'receipt' 18 %} My orders</a>
+            <a href="{% url 'cars:my_listings' %}">{% icon 'car' 18 %} My listings</a>
+            <a href="{% url 'cars:saved' %}">{% icon 'heart' 18 %} Saved cars</a>
+            <a href="{% url 'users:settings' %}">{% icon 'settings' 18 %} Settings</a>
+            {% if user.is_staff %}
+              <div class="menu-sep"></div>
+              <a href="{% url 'cars:moderation' %}">{% icon 'moderation' 18 %} Moderation</a>
+              <a href="{% url 'admin:index' %}">{% icon 'lock' 18 %} Admin</a>
+            {% endif %}
+            <div class="menu-sep"></div>
+            <form method="post" action="{% url 'account_logout' %}">{% csrf_token %}
+              <button type="submit">{% icon 'logout' 18 %} Sign out</button>
+            </form>
+          </div>
+        </details>
+      {% else %}
+        <a href="{% url 'account_login' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-ghost btn-sm hide-sm">Sign in</a>
+        <a href="{% url 'cars:sell' %}" class="btn btn-dark btn-sm hide-sm">Sell a car</a>
+      {% endif %}
+      <button class="icon-btn menu-toggle" type="button" data-drawer-open="mobile-nav" aria-label="Open menu">{% icon 'menu' 24 %}</button>
+    </div>
+  </div>
+</header>
+
+<div class="drawer" id="mobile-nav" aria-hidden="true">
+  <div class="drawer-backdrop" data-drawer-close></div>
+  <div class="drawer-panel" role="dialog" aria-label="Menu">
+    <div class="row between mb-2">
+      <a href="{% url 'home' %}" class="logo">{% include 'partials/logo_mark.html' %}<span>Car<em>Hub</em></span></a>
+      <button class="icon-btn" type="button" data-drawer-close aria-label="Close menu">{% icon 'x' 22 %}</button>
+    </div>
+    <form action="{% url 'cars:browse' %}" method="get" class="mb-2">
+      <label class="input-group">{% icon 'search' 18 'subtle' %}<input type="search" name="q" placeholder="Search cars" aria-label="Search cars" style="padding-left:8px"></label>
+    </form>
+    <nav class="drawer-nav">
+      <a href="{% url 'cars:browse' %}">{% icon 'car' 20 %} Buy a car</a>
+      <a href="{% url 'cars:sell' %}">{% icon 'tag' 20 %} Sell your car</a>
+      <a href="{% url 'accessories' %}">{% icon 'wrench' 20 %} Accessories <span class="badge">Soon</span></a>
+      <a href="{% url 'drivers' %}">{% icon 'steering' 20 %} Hire a driver <span class="badge">Soon</span></a>
+      {% if user.is_authenticated %}
+        <a href="{% url 'users:dashboard' %}">{% icon 'dashboard' 20 %} Dashboard</a>
+        <a href="{% url 'users:inbox' %}">{% icon 'message' 20 %} Messages {% if messages_unread_count %}<span class="badge badge-brand">{{ messages_unread_count }}</span>{% endif %}</a>
+        <a href="{% url 'users:notifications' %}">{% icon 'bell' 20 %} Notifications</a>
+        <a href="{% url 'cars:orders' %}">{% icon 'receipt' 20 %} My orders</a>
+        <a href="{% url 'cars:my_listings' %}">{% icon 'list' 20 %} My listings</a>
+        <a href="{% url 'users:settings' %}">{% icon 'settings' 20 %} Settings</a>
+        {% if user.is_staff %}<a href="{% url 'cars:moderation' %}">{% icon 'moderation' 20 %} Moderation</a>{% endif %}
+      {% endif %}
+      <a href="{% url 'about' %}">{% icon 'info' 20 %} About CarHub</a>
+      <a href="{% url 'contact' %}">{% icon 'headset' 20 %} Contact</a>
+    </nav>
+    <div class="mt-3">
+      {% if user.is_authenticated %}
+        <form method="post" action="{% url 'account_logout' %}">{% csrf_token %}<button class="btn btn-block">{% icon 'logout' 18 %} Sign out</button></form>
+      {% else %}
+        <a href="{% url 'account_login' %}" class="btn btn-dark btn-block">Sign in</a>
+        <a href="{% url 'account_signup' %}" class="btn btn-block mt-1">Create an account</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endwith %}

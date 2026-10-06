@@ -1,0 +1,66 @@
+{% extends 'driverzone/base.html' %}
+{% block title %}Driver Profile{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-lg border-0" style="border-radius:18px;">
+            <img src="{{ driver.photo.url }}" class="card-img-top" alt="{{ driver.user.get_full_name }}" title="Click to zoom" role="button" style="height:320px;object-fit:cover;border-radius:18px 18px 0 0;" onclick="openImageZoom('{{ driver.photo.url }}', '{{ driver.user.get_full_name|escapejs }}')">
+            <div class="card-body">
+                <h2 class="card-title" style="color:#FFC107;font-weight:900;">{{ driver.user.get_full_name|default:driver.user.username }}</h2>
+                <p>{{ driver.bio }}</p>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-bold" style="color:#232323;font-size:1.3rem;">Rating: {{ driver.rating }}</span>
+                    {% if driver.is_available %}
+                    <span class="badge bg-success">Available</span>
+                    {% else %}
+                    <span class="badge bg-danger">Unavailable</span>
+                    {% endif %}
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'driverzone:order_driver' driver.pk %}" class="btn btn-warning rounded-pill px-4">Order This Driver</a>
+                    {% if user.is_authenticated and (user == driver.user or user.is_staff) %}
+                    <form method="post" action="{% url 'driverzone:publish_driver' driver.pk %}">
+                        {% csrf_token %}
+                        <button class="btn btn-outline-secondary rounded-pill">{% if driver.is_available %}Unpublish{% else %}Publish{% endif %}</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="card shadow-lg border-0 mt-4" style="border-radius:18px;">
+            <div class="card-body">
+                <h4 class="mb-3" style="color:#FFC107;font-weight:700;">Reviews</h4>
+                {% for review in reviews %}
+                <div class="mb-3 border-bottom pb-2">
+                    <strong>{{ review.user.get_full_name|default:review.user.username }}</strong>
+                    <span class="badge bg-warning text-dark ms-2">{{ review.rating }}/5</span>
+            <!-- Driver services quick info (keeps service UI inside driverzone app) -->
+            <div class="card shadow-lg border-0 mt-4" style="border-radius:18px;">
+                <div class="card-body">
+                    <h4 class="mb-3" style="color:#FFC107;font-weight:700;">Services & Info</h4>
+                    {% include 'driverzone/_services_tab.html' with drivers=drivers_list only %}
+                </div>
+            </div>
+                    <p class="mb-1">{{ review.comment }}</p>
+                    <small class="text-muted">{{ review.created_at|date:'M d, Y H:i' }}</small>
+                </div>
+                {% empty %}
+                <div class="text-warning">No reviews yet.</div>
+                {% endfor %}
+                {% if review_submitted %}
+                    <div class="alert alert-success mt-3">Review submitted successfully!</div>
+                {% endif %}
+                {% if user.is_authenticated %}
+                <form method="post" class="mt-3">
+                    {% csrf_token %}
+                    {{ review_form.as_p }}
+                    <button type="submit" name="review_submit" class="btn btn-primary rounded-pill px-4">Submit Review</button>
+                </form>
+                {% else %}
+                <div class="alert alert-info mt-2">Login to add a review.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

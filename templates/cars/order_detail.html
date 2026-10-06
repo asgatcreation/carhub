@@ -1,0 +1,49 @@
+{% extends 'users/account_base.html' %}
+{% block title %}Order {{ order.number }} | CarHub{% endblock %}
+{% block account_content %}
+<a href="{% url 'cars:orders' %}" class="link-arrow small mb-2" style="display:inline-flex">{% icon 'arrow-left' 16 %} All orders</a>
+
+<div class="card">
+  {% if order.status == 'paid' %}
+    <div class="status-hero" style="border-bottom:1px solid var(--line)">
+      <div class="ok">{% icon 'check' 34 %}</div>
+      <h2>Your car{{ order.items.count|pluralize }} {{ order.items.count|pluralize:'is,are' }} reserved</h2>
+      <p class="muted mb-0">Order <strong class="num">{{ order.number }}</strong> · the seller has been notified and will contact you on {{ order.phone }} to arrange your inspection.</p>
+      {% if order.provider == 'demo' %}<span class="badge badge-info mt-2">Demo order — no payment was taken</span>{% endif %}
+    </div>
+  {% else %}
+    <div class="card-head"><h3>Order {{ order.number }}</h3>{% include 'partials/order_status.html' %}</div>
+  {% endif %}
+
+  {% for item in order.items.all %}
+    <div class="line-item">
+      <div class="thumb">{% if item.image_url %}<img src="{{ item.image_url }}" alt="" referrerpolicy="no-referrer">{% endif %}</div>
+      <div>
+        <h3>{% if item.car %}<a href="{{ item.car.get_absolute_url }}">{{ item.title }}</a>{% else %}{{ item.title }}{% endif %}</h3>
+        {% if item.car %}<div class="small muted">{{ item.car.location }}, {{ item.car.state }} · Seller: {{ item.car.created_by.profile.company_name|default:item.car.created_by.get_full_name }}</div>{% endif %}
+      </div>
+      <div style="text-align:right"><div class="num" style="font-weight:800;color:var(--ink)">{{ item.price|naira }}</div><div class="xs muted">Deposit {{ item.deposit|naira }}</div></div>
+    </div>
+  {% endfor %}
+
+  <div class="card-pad" style="border-top:1px solid var(--line)">
+    <div class="grid grid-2">
+      <div>
+        <h4>What happens next</h4>
+        <ol class="small muted" style="padding-left:18px;margin:0;display:grid;gap:6px">
+          <li>The seller confirms an inspection time with you.</li>
+          <li>Inspect the car{% if order.inspection_state %} in {{ order.inspection_state }}{% endif %} — bring your mechanic.</li>
+          <li>Happy? Pay the balance of <strong>{{ order.balance_due|naira }}</strong> and collect your keys.</li>
+          <li>Not as described? Your deposit is refunded in full.</li>
+        </ol>
+      </div>
+      <div>
+        <div class="summary-row"><span class="muted">Vehicles total</span><span class="num">{{ order.vehicles_total|naira }}</span></div>
+        <div class="summary-row"><span class="muted">Deposit {% if order.status == 'paid' %}paid{% else %}due{% endif %}</span><span class="num">{{ order.deposit_total|naira }}</span></div>
+        <div class="summary-row total"><span>Balance at inspection</span><span class="num">{{ order.balance_due|naira }}</span></div>
+        <div class="xs subtle mt-1">Placed {{ order.created_at|date:'j M Y, H:i' }}{% if order.payment_reference %} · Ref {{ order.payment_reference }}{% endif %}</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

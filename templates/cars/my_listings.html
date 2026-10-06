@@ -1,0 +1,65 @@
+{% extends 'users/account_base.html' %}
+{% block title %}My listings | CarHub{% endblock %}
+{% block account_content %}
+<div class="row between row-wrap mb-3">
+  <h2 class="mb-0">My listings</h2>
+  <a href="{% url 'cars:listing_create' %}" class="btn btn-dark">{% icon 'plus' 18 %} New listing</a>
+</div>
+
+<div class="grid grid-4 mb-3">
+  <div class="card stat-card"><span class="icon-wrap">{% icon 'car' 20 %}</span><strong>{{ stats.live }}</strong><span>Live</span></div>
+  <div class="card stat-card"><span class="icon-wrap">{% icon 'clock' 20 %}</span><strong>{{ stats.pending }}</strong><span>In review</span></div>
+  <div class="card stat-card"><span class="icon-wrap">{% icon 'eye' 20 %}</span><strong class="num">{{ stats.views }}</strong><span>Total views</span></div>
+  <div class="card stat-card"><span class="icon-wrap">{% icon 'message' 20 %}</span><strong>{{ stats.enquiries }}</strong><span>Enquiries</span></div>
+</div>
+
+{% if listings %}
+  <div class="card">
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Car</th><th>Price</th><th>Status</th><th>Views</th><th>Saves</th><th></th></tr></thead>
+        <tbody>
+          {% for car in listings %}
+            <tr>
+              <td>
+                <div class="row">
+                  <img class="thumb-sm" src="{{ car.thumbnail }}" alt="" referrerpolicy="no-referrer">
+                  <div><a href="{{ car.get_absolute_url }}" style="font-weight:700;color:var(--ink)">{{ car.full_title }}</a><div class="xs muted">Listed {{ car.created_at|date:'j M Y' }}</div></div>
+                </div>
+              </td>
+              <td class="num" style="font-weight:700">{{ car.price|naira }}</td>
+              <td>
+                {% if car.approval_status == 'pending' %}<span class="badge badge-warning">In review</span>
+                {% elif car.approval_status == 'rejected' %}<span class="badge badge-danger" title="{{ car.approval_reason }}">Not approved</span>
+                {% elif car.status == 'sold' %}<span class="badge">Sold</span>
+                {% elif car.status == 'reserved' %}<span class="badge badge-info">Reserved</span>
+                {% else %}<span class="badge badge-success">{% icon 'check' 12 %} Live</span>{% endif %}
+                {% if car.approval_status == 'rejected' and car.approval_reason %}<div class="xs muted mt-1" style="max-width:220px">{{ car.approval_reason }}</div>{% endif %}
+              </td>
+              <td class="num">{{ car.views_count }}</td>
+              <td class="num">{{ car.saves }}</td>
+              <td>
+                <div class="row" style="justify-content:flex-end">
+                  <a class="btn btn-sm" href="{% url 'cars:listing_edit' car.slug %}">{% icon 'edit' 16 %} Edit</a>
+                  {% if car.status == 'available' and car.approval_status == 'approved' %}
+                    <form method="post" action="{% url 'cars:listing_status' car.slug %}" data-confirm="Mark {{ car.title }} as sold?">{% csrf_token %}<button class="btn btn-sm" name="action" value="sold">Mark sold</button></form>
+                  {% elif car.status == 'sold' %}
+                    <form method="post" action="{% url 'cars:listing_status' car.slug %}">{% csrf_token %}<button class="btn btn-sm btn-ghost" name="action" value="available">Relist</button></form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% else %}
+  <div class="empty">
+    <div class="empty-icon">{% icon 'car' 28 %}</div>
+    <h3>You haven't listed a car yet</h3>
+    <p>It's free and takes about five minutes. Buyers can reserve with a deposit before they visit.</p>
+    <a href="{% url 'cars:listing_create' %}" class="btn btn-primary">List your car</a>
+  </div>
+{% endif %}
+{% endblock %}

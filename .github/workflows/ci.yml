@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    env:
+      DJANGO_DEBUG: "True"
+      DJANGO_SECRET_KEY: ci-only-secret-key
+      DEMO_CHECKOUT: "True"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: System checks
+        run: python manage.py check --fail-level WARNING
+      - name: Migrations are up to date
+        run: python manage.py makemigrations --check --dry-run
+      - name: Run tests
+        run: python manage.py test --verbosity 2
+      - name: Seed demo data (smoke test)
+        run: |
+          python manage.py migrate --noinput
+          python manage.py seed_demo

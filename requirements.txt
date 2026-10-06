@@ -1,0 +1,15 @@
+# Core
+Django==5.2.4
+django-allauth==65.12.0
+channels==4.3.2
+Pillow==12.0.0
+requests==2.32.3
+whitenoise==6.7.0
+daphne==4.2.3
+python-dotenv==1.0.1
+
+# Production database (DATABASE_URL=postgres://...)
+psycopg2-binary==2.9.11
+
+# Optional — only needed when running more than one server process:
+# channels-redis>=4.2

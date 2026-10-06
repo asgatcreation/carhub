@@ -1,0 +1,17 @@
+digraph ProfileER {
+  rankdir=LR;
+  node [shape=record, fontname=Helvetica];
+
+  User [label="{CustomUser|id: PK\nemail\nusername\ndate_joined}"];
+  Profile [label="{Profile|id: PK\nuser_id: FK\nmiddle_name\nbio\nphone\nseller_type\nis_verified\ntotal_views\nactive_listings_count}"];
+  Verification [label="{Verification|id: PK\nprofile_id: FK\nmethod\nstatus\nreviewed_by\nreviewed_at}"];
+  Review [label="{Review|id: PK\nprofile_id: FK\nreviewer_id: FK\nrating\ncommunication\npunctuality\nbody}"];
+  SavedItem [label="{SavedItem|id: PK\nuser_id: FK\ncontent_type_id\nobject_id\ncreated_at}"];
+  Subscription [label="{Subscription|id: PK\nprofile_id: FK\nplan_name\nstarted_at\nexpires_at\nis_active}"];
+
+  User -> Profile [label="1..1", arrowhead=none];
+  Profile -> Verification [label="0..*", arrowhead=vee];
+  Profile -> Review [label="0..*", arrowhead=vee];
+  User -> SavedItem [label="0..*", arrowhead=vee];
+  Profile -> Subscription [label="0..*", arrowhead=vee];
+}

@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Saved cars | CarHub{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div class="container">
+    <h1>Saved cars</h1>
+    <p class="muted mb-0">{% if user.is_authenticated %}Your shortlist, saved to your account.{% else %}Saved on this device — <a class="link" href="{% url 'account_login' %}?next={{ request.path }}">sign in</a> to keep them across devices.{% endif %}</p>
+  </div>
+</div>
+<div class="container section-sm">
+  {% if cars %}
+    <div class="cars-grid">
+      {% for car in cars %}{% include 'partials/car_card.html' with saved=saved_ids %}{% endfor %}
+    </div>
+  {% else %}
+    <div class="empty">
+      <div class="empty-icon">{% icon 'heart' 28 %}</div>
+      <h3>No saved cars yet</h3>
+      <p>Tap the heart on any car to build a shortlist and compare later.</p>
+      <a href="{% url 'cars:browse' %}" class="btn btn-dark">Start browsing</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block title %}{{ profile.display_name }} — cars for sale | CarHub{% endblock %}
+
+{% block content %}
+<div class="seller-hero">
+  <div class="seller-cover"></div>
+  <div class="container seller-hero-inner">
+    <span class="avatar avatar-xl {% if not profile.avatar_url %}avatar-dark{% endif %}">{% if profile.avatar_url %}<img src="{{ profile.avatar_url }}" alt="">{% else %}{{ seller|initials }}{% endif %}</span>
+    <div class="grow">
+      <div class="row row-wrap" style="gap:8px">
+        <h1 class="mb-0" style="font-size:clamp(1.5rem,3vw,2.1rem)">{{ profile.display_name }}</h1>
+        {% if profile.is_verified %}<span class="badge badge-info">{% icon 'verified' 14 %} Verified {% if profile.company_name %}dealer{% else %}seller{% endif %}</span>{% endif %}
+      </div>
+      <div class="row row-wrap muted small mt-1">
+        {% if profile.city %}<span class="row" style="gap:4px">{% icon 'pin' 15 %} {{ profile.city }}</span>{% endif %}
+        {% if agg.n %}<span class="row" style="gap:4px"><span class="stars">{% icon 'star' 15 %}</span> {{ agg.overall|floatformat:1 }} ({{ agg.n }} review{{ agg.n|pluralize }})</span>{% endif %}
+        <span>Member since {{ seller.date_joined|date:'F Y' }}</span>
+        {% if profile.specialization %}<span>· {{ profile.specialization }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="row">
+      {% if profile.whatsapp_number and user.is_authenticated %}<a class="btn" href="https://wa.me/{{ profile.whatsapp_number|cut:' '|cut:'+' }}" target="_blank" rel="noopener">{% icon 'whatsapp' 18 %} WhatsApp</a>{% endif %}
+      <a class="btn btn-dark" href="#listings">{% icon 'car' 18 %} {{ listing_count }} car{{ listing_count|pluralize }}</a>
+    </div>
+  </div>
+</div>
+
+<div class="container detail-layout">
+  <div>
+    <section id="listings">
+      <div class="section-head"><div><h2>Cars for sale</h2></div></div>
+      {% if listings_page.object_list %}
+        <div class="cars-grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))">
+          {% for car in listings_page %}{% include 'partials/car_card.html' with saved=saved_ids %}{% endfor %}
+        </div>
+        {% include 'partials/pagination.html' with page=listings_page %}
+      {% else %}
+        <div class="empty"><h3>No cars listed right now</h3><p>Check back soon.</p></div>
+      {% endif %}
+    </section>
+
+    <section id="reviews" class="card card-pad mt-4">
+      <div class="row between row-wrap"><h2 class="mb-0" style="font-size:1.35rem">Reviews</h2>{% if agg.n %}<span class="muted small">{{ agg.n }} review{{ agg.n|pluralize }}</span>{% endif %}</div>
+      {% if agg.n %}
+        <div class="grid grid-2 mt-2" style="align-items:center">
+          <div>
+            <div class="price price-lg">{{ agg.overall|floatformat:1 }}<span class="muted" style="font-size:1rem"> / 5</span></div>
+            <span class="stars">{% for i in '12345' %}<svg class="icon {% if forloop.counter > agg.overall|floatformat:0|add:0 %}off{% endif %}" width="20" height="20"><use href="#i-star"></use></svg>{% endfor %}</span>
+          </div>
+          <div class="rating-bars">
+            {% for label, value in breakdown %}
+              <div class="rating-bar"><span class="muted">{{ label }}</span><span class="track"><span class="fill" style="width:{% widthratio value 5 100 %}%"></span></span><strong class="num">{{ value|floatformat:1 }}</strong></div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="divider"></div>
+        {% for r in reviews_page %}
+          <article class="review">
+            <div class="row between row-wrap">
+              <div class="row"><span class="avatar" style="width:32px;height:32px">{{ r.reviewer|initials }}</span><div><strong style="color:var(--ink)">{{ r.reviewer.get_full_name|default:'CarHub buyer' }}</strong><div class="xs muted">{{ r.created_at|date:'j M Y' }}</div></div></div>
+              <span class="stars">{% for i in '12345' %}<svg class="icon {% if forloop.counter > r.rating|floatformat:0|add:0 %}off{% endif %}" width="16" height="16"><use href="#i-star"></use></svg>{% endfor %}</span>
+            </div>
+            {% if r.title %}<h4 class="mt-1 mb-0">{{ r.title }}</h4>{% endif %}
+            <p class="mt-1 mb-0">{{ r.body }}</p>
+          </article>
+        {% endfor %}
+        {% include 'partials/pagination.html' with page=reviews_page param='rpage' %}
+      {% else %}
+        <p class="muted mt-1">No reviews yet.</p>
+      {% endif %}
+
+      {% if user.is_authenticated and user != seller %}
+        <div class="divider"></div>
+        <h3>Write a review</h3>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="field">
+            <span class="label">Overall rating</span>
+            <div class="star-input" role="radiogroup" aria-label="Overall rating">
+              {% for n in '54321' %}<input type="radio" id="rate-{{ n }}" name="rating" value="{{ n }}" {% if form.rating.value|stringformat:'s' == n %}checked{% endif %}><label for="rate-{{ n }}" title="{{ n }} star{{ n|pluralize }}"><svg class="icon" width="28" height="28"><use href="#i-star"></use></svg></label>{% endfor %}
+            </div>
+            {% for e in form.rating.errors %}<p class="error">{{ e }}</p>{% endfor %}
+          </div>
+          <div class="form-grid">
+            {% for f in form %}{% if f.name in 'communication professionalism punctuality condition' %}
+              <div class="field {% if f.errors %}has-error{% endif %}">
+                <label for="{{ f.id_for_label }}">{{ f.label }}</label>
+                <select name="{{ f.name }}" id="{{ f.id_for_label }}" class="input">{% for n in '54321' %}<option value="{{ n }}" {% if f.value|stringformat:'s' == n %}selected{% endif %}>{{ n }} / 5</option>{% endfor %}</select>
+              </div>
+            {% endif %}{% endfor %}
+          </div>
+          {% include 'partials/field.html' with field=form.title %}
+          {% include 'partials/field.html' with field=form.body %}
+          <button class="btn btn-dark">Publish review</button>
+        </form>
+      {% elif not user.is_authenticated %}
+        <div class="divider"></div>
+        <a class="btn" href="{% url 'account_login' %}?next={{ request.path|urlencode }}%23reviews">Sign in to write a review</a>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="detail-aside">
+    <div class="card card-pad">
+      <h3>About</h3>
+      <p class="muted">{{ profile.business_description|default:profile.bio|default:'This seller has not added a description yet.' }}</p>
+      <div class="seller-meta" style="grid-template-columns:repeat(2,1fr)">
+        <div><strong>{{ listing_count }}</strong><small>Cars for sale</small></div>
+        <div><strong>{{ sold_count }}</strong><small>Cars sold</small></div>
+        {% if profile.years_in_business %}<div><strong>{{ profile.years_in_business }}</strong><small>Years in business</small></div>{% endif %}
+        <div><strong>{% if profile.response_rate_percent %}{{ profile.response_rate_percent }}%{% else %}—{% endif %}</strong><small>Response rate</small></div>
+      </div>
+    </div>
+    <div class="card card-pad">
+      <h3>Buy with confidence</h3>
+      <ul class="safety-tips">
+        <li>{% icon 'shield' 18 %} Reserve through CarHub — deposits are refundable</li>
+        <li>{% icon 'message' 18 %} Keep chats on CarHub for your protection</li>
+        <li>{% icon 'check-circle' 18 %} Inspect before paying the balance</li>
+      </ul>
+    </div>
+  </aside>
+</div>
+{% endblock %}

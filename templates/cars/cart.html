@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}Your cart | CarHub{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div class="container">
+    <div class="steps-bar"><span class="is-current"><span class="step-num">1</span>Cart</span>{% icon 'chevron-right' 14 %}<span><span class="step-num">2</span>Details &amp; payment</span>{% icon 'chevron-right' 14 %}<span><span class="step-num">3</span>Inspection</span></div>
+    <h1>Your cart</h1>
+    <p class="muted mb-0">Reserve the cars you love with a refundable deposit — pay the balance only after inspection.</p>
+  </div>
+</div>
+
+<div class="container checkout-layout">
+  <div>
+    {% if cars %}
+      <div class="card">
+        {% for car in cars %}
+          <div class="line-item">
+            <a class="thumb" href="{{ car.get_absolute_url }}"><img src="{{ car.thumbnail }}" alt="{{ car.full_title }}" referrerpolicy="no-referrer"></a>
+            <div>
+              <h3><a href="{{ car.get_absolute_url }}">{{ car.full_title }}</a></h3>
+              <div class="car-specs mb-1">
+                <span>{% icon 'gauge' 15 %}{{ car.mileage|km }}</span>
+                <span>{% icon 'pin' 15 %}{{ car.location }}, {{ car.state }}</span>
+                <span>{% icon 'tag' 15 %}{{ car.get_condition_display }}</span>
+              </div>
+              <div class="small muted">Sold by {{ car.created_by.profile.company_name|default:car.created_by.get_full_name }}</div>
+              {% if not car.is_available %}<span class="badge badge-warning mt-1">No longer available</span>{% endif %}
+            </div>
+            <div style="text-align:right">
+              <div class="price" style="font-size:1.15rem">{{ car.price|naira }}</div>
+              <div class="xs muted mb-1">Deposit today: {{ deposit_per_car|naira }}</div>
+              <form method="post" action="{% url 'cars:cart_remove' car.pk %}">{% csrf_token %}
+                <button class="btn btn-ghost btn-sm" type="submit">{% icon 'trash' 16 %} Remove</button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      <a href="{% url 'cars:browse' %}" class="link-arrow mt-3" style="display:inline-flex">{% icon 'arrow-left' 18 %} Keep browsing</a>
+    {% else %}
+      <div class="empty">
+        <div class="empty-icon">{% icon 'bag' 28 %}</div>
+        <h3>Your cart is empty</h3>
+        <p>Add a car to your cart to reserve it. You'll only pay a refundable deposit online.</p>
+        <a href="{% url 'cars:browse' %}" class="btn btn-dark">Browse cars</a>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if cars %}
+  <aside class="card summary">
+    <h3>Order summary</h3>
+    <div class="summary-row"><span class="muted">Vehicles ({{ summary.count }})</span><span class="num">{{ summary.vehicles_total|naira }}</span></div>
+    <div class="summary-row"><span class="muted">Balance due at inspection</span><span class="num">{{ summary.balance_total|naira }}</span></div>
+    <div class="summary-row total"><span>Due today (deposit)</span><span class="num">{{ summary.deposit_total|naira }}</span></div>
+    <a href="{% url 'cars:checkout' %}" class="btn btn-primary btn-lg btn-block mt-2">Continue to checkout {% icon 'arrow-right' 18 %}</a>
+    <div class="deposit-note">{% icon 'shield' 18 %}<div>Deposits are <strong>fully refundable</strong> if the car fails inspection or isn't as described.</div></div>
+    <div class="secure-note">{% icon 'lock' 16 %} Secure payment via Paystack</div>
+  </aside>
+  {% endif %}
+</div>
+{% endblock %}

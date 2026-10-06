@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block footer %}{% endblock %}
+{% block page %}
+<div class="auth-wrap">
+  <aside class="auth-side">
+    <a href="{% url 'home' %}" class="logo" style="color:#fff">{% include 'partials/logo_mark.html' %}<span>Car<em>Hub</em></span></a>
+    <div>
+      <h2>{% block side_title %}Nigeria's marketplace for verified cars.{% endblock %}</h2>
+      <p class="quote">{% block side_text %}Reviewed listings, vetted dealers and refundable reservation deposits — buying a car the way it should be.{% endblock %}</p>
+      <div class="hero-trust" style="margin-top:20px">
+        <span>{% icon 'verified' 18 %} Verified dealers</span>
+        <span>{% icon 'shield' 18 %} Refundable deposits</span>
+        <span>{% icon 'message' 18 %} In-app chat</span>
+      </div>
+    </div>
+    <p class="small" style="color:rgba(255,255,255,.5);margin:0">© {% now 'Y' %} CarHub</p>
+  </aside>
+  <section class="auth-main">
+    <div class="auth-card">{% block auth %}{% endblock %}</div>
+  </section>
+</div>
+{% endblock %}

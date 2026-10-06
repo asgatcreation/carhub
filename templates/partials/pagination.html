@@ -1,0 +1,22 @@
+{# Usage: {% include 'partials/pagination.html' with page=page_obj param='page' %} #}
+{% if page.has_other_pages %}
+{% with p=param|default:'page' %}
+<nav class="pagination" aria-label="Pagination">
+  {% if page.has_previous %}
+    <a href="{% if p == 'page' %}{% url_replace page=page.previous_page_number %}{% else %}{% url_replace rpage=page.previous_page_number %}{% endif %}" aria-label="Previous page">{% icon 'chevron-left' 18 %}</a>
+  {% endif %}
+  {% for n in page.paginator.get_elided_page_range %}
+    {% if n == page.number %}
+      <span class="is-current" aria-current="page">{{ n }}</span>
+    {% elif n == page.paginator.ELLIPSIS %}
+      <span class="gap">…</span>
+    {% else %}
+      <a href="{% if p == 'page' %}{% url_replace page=n %}{% else %}{% url_replace rpage=n %}{% endif %}">{{ n }}</a>
+    {% endif %}
+  {% endfor %}
+  {% if page.has_next %}
+    <a href="{% if p == 'page' %}{% url_replace page=page.next_page_number %}{% else %}{% url_replace rpage=page.next_page_number %}{% endif %}" aria-label="Next page">{% icon 'chevron-right' 18 %}</a>
+  {% endif %}
+</nav>
+{% endwith %}
+{% endif %}

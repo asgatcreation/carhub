@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Contact & support | CarHub{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="container">
+    <h1>How can we help?</h1>
+    <p class="muted mb-0">Questions about a car, a reservation or selling? We reply within one working day.</p>
+  </div>
+</div>
+<div class="container checkout-layout">
+  <form method="post" class="card" novalidate>
+    {% csrf_token %}
+    <div class="form-section">
+      <h3>{% icon 'mail' 20 %} Send us a message</h3>
+      <div class="form-grid">
+        {% include 'partials/field.html' with field=form.name %}
+        {% include 'partials/field.html' with field=form.email %}
+        <div class="span-2">{% include 'partials/field.html' with field=form.topic %}</div>
+        <div class="span-2">{% include 'partials/field.html' with field=form.message %}</div>
+      </div>
+      <button class="btn btn-dark">{% icon 'send' 18 %} Send message</button>
+    </div>
+  </form>
+  <aside class="stack">
+    <div class="card card-pad">
+      <h3>Support hours</h3>
+      <p class="muted mb-0">Monday – Saturday<br>8:00am – 7:00pm WAT</p>
+    </div>
+    <div class="card card-pad faq">
+      <h3>Quick answers</h3>
+      <details><summary>Is my deposit refundable?</summary><p>Yes. If the car fails your inspection or isn't as described, your deposit is refunded in full.</p></details>
+      <details><summary>Can I inspect before paying?</summary><p>Always. The deposit only reserves the car — you pay the balance after inspecting it.</p></details>
+      <details><summary>How do I become a verified dealer?</summary><p>Apply from your <a class="link" href="{% url 'users:apply_seller' %}">account</a> with your CAC or ID details.</p></details>
+    </div>
+  </aside>
+</div>
+{% endblock %}

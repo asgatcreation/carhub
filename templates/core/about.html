@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}About CarHub{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="container" style="position:relative;z-index:1;padding-block:72px">
+    <span class="eyebrow" style="color:var(--brand)">About CarHub</span>
+    <h1 style="max-width:16ch">Making car buying in Nigeria <span class="hl">honest.</span></h1>
+    <p class="lead">Buying a car shouldn't mean endless calls, wasted trips and fake listings. CarHub brings verified sellers, transparent pricing and protected reservations into one place.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="grid grid-2" style="gap:48px;align-items:center">
+      <div>
+        <span class="eyebrow">Our mission</span>
+        <h2>Trust at every step of the journey</h2>
+        <p class="muted">We review every listing before it goes live, verify dealers' identity and business documents, and hold buyers' deposits until they've inspected the car. Sellers get serious buyers; buyers get peace of mind.</p>
+        <p class="muted">Our vision is a marketplace where anyone in Nigeria can buy or sell a car online as confidently as they would at a trusted dealer down the road.</p>
+      </div>
+      <div class="grid grid-2">
+        <div class="card stat-card"><span class="icon-wrap">{% icon 'car' 20 %}</span><strong>{{ listings }}</strong><span>Cars listed</span></div>
+        <div class="card stat-card"><span class="icon-wrap">{% icon 'verified' 20 %}</span><strong>{{ sellers }}</strong><span>Verified dealers</span></div>
+        <div class="card stat-card"><span class="icon-wrap">{% icon 'shield' 20 %}</span><strong>100%</strong><span>Refundable deposits</span></div>
+        <div class="card stat-card"><span class="icon-wrap">{% icon 'clock' 20 %}</span><strong>&lt;24h</strong><span>Listing review time</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="section-head"><div><span class="eyebrow">What we stand for</span><h2>Our values</h2></div></div>
+    <div class="grid grid-3">
+      <div class="card value-card"><div class="icon-wrap">{% icon 'shield' 22 %}</div><h3>Verified, not just listed</h3><p>Listings are moderated and dealers are ID-checked. Bad actors are removed fast.</p></div>
+      <div class="card value-card"><div class="icon-wrap">{% icon 'tag' 22 %}</div><h3>Transparent prices</h3><p>Real asking prices on every car, plus finance estimates so you know what you can afford.</p></div>
+      <div class="card value-card"><div class="icon-wrap">{% icon 'lock' 22 %}</div><h3>Protected payments</h3><p>Deposits go through Paystack and are refundable if the car isn't as described.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="container container-narrow">
+    <div class="card card-pad">
+      <h2 style="font-size:1.35rem">About this project</h2>
+      <p class="muted">CarHub is a portfolio project built with Django 5, Channels (WebSockets), django-allauth and Paystack. The listings, dealers and reviews are demo data; vehicle photos come from Wikimedia Commons and are credited on each listing under their Creative Commons licences.</p>
+      <a class="link-arrow" href="{% url 'contact' %}">Get in touch {% icon 'arrow-right' 18 %}</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

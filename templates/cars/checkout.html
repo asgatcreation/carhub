@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}Checkout | CarHub{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div class="container">
+    <div class="steps-bar"><span class="is-done"><span class="step-num">{% icon 'check' 12 %}</span>Cart</span>{% icon 'chevron-right' 14 %}<span class="is-current"><span class="step-num">2</span>Details &amp; payment</span>{% icon 'chevron-right' 14 %}<span><span class="step-num">3</span>Inspection</span></div>
+    <h1>Reserve your car{{ cars|length|pluralize }}</h1>
+  </div>
+</div>
+
+<div class="container checkout-layout">
+  <form method="post" class="card" novalidate>
+    {% csrf_token %}
+    {% if unavailable %}
+      <div class="form-section"><div class="notice danger">{% icon 'alert' 20 %}<div>{% for c in unavailable %}{{ c.full_title }}{% if not forloop.last %}, {% endif %}{% endfor %} {{ unavailable|length|pluralize:'is,are' }} no longer available and won't be included.</div></div></div>
+    {% endif %}
+    <div class="form-section">
+      <h3>{% icon 'user' 20 %} Your details</h3>
+      <p>We share these with the seller so they can arrange your inspection.</p>
+      <div class="form-grid">
+        {% include 'partials/field.html' with field=form.full_name %}
+        {% include 'partials/field.html' with field=form.phone %}
+        <div class="span-2">{% include 'partials/field.html' with field=form.email %}</div>
+      </div>
+    </div>
+    <div class="form-section">
+      <h3>{% icon 'calendar' 20 %} Inspection</h3>
+      <p>Tell the seller where and when you'd like to see the car.</p>
+      {% include 'partials/field.html' with field=form.inspection_state %}
+      {% include 'partials/field.html' with field=form.notes %}
+    </div>
+    <div class="form-section">
+      <h3>{% icon 'card' 20 %} Payment</h3>
+      {% if paystack %}
+        <p>You'll be redirected to Paystack to pay your deposit securely by card, bank transfer or USSD.</p>
+      {% elif demo %}
+        <div class="notice info mb-2">{% icon 'info' 20 %}<div><strong>Demo mode.</strong> No payment provider is configured, so this reservation is recorded as a demo order and no money changes hands.</div></div>
+      {% else %}
+        <div class="notice danger mb-2">{% icon 'alert' 20 %}<div>Online payments are temporarily unavailable.</div></div>
+      {% endif %}
+      <label class="check {% if form.agree.errors %}has-error{% endif %}">{{ form.agree }} <span>{{ form.agree.label }}</span></label>
+      {% if form.agree.errors %}<p class="error mt-1">You need to accept this to continue.</p>{% endif %}
+      <button type="submit" class="btn btn-primary btn-lg btn-block mt-3" {% if not can_pay %}disabled{% endif %}>
+        {% icon 'lock' 20 %} {% if demo %}Confirm demo reservation{% else %}Pay {{ summary.deposit_total|naira }} deposit{% endif %}
+      </button>
+      <div class="secure-note">{% icon 'shield' 16 %} Your deposit is held until the inspection is complete</div>
+    </div>
+  </form>
+
+  <aside class="card summary">
+    <h3>Summary</h3>
+    {% for car in cars %}
+      <div class="row" style="align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)">
+        <img src="{{ car.thumbnail }}" alt="" style="width:76px;height:56px;border-radius:8px;object-fit:cover" referrerpolicy="no-referrer">
+        <div class="grow small"><strong style="color:var(--ink)">{{ car.full_title }}</strong><div class="muted">{{ car.location }}, {{ car.state }}</div></div>
+        <span class="small num" style="font-weight:700">{{ car.price|naira_short }}</span>
+      </div>
+    {% endfor %}
+    <div class="summary-row mt-1"><span class="muted">Vehicles total</span><span class="num">{{ summary.vehicles_total|naira }}</span></div>
+    <div class="summary-row"><span class="muted">Balance at inspection</span><span class="num">{{ summary.balance_total|naira }}</span></div>
+    <div class="summary-row total"><span>Pay now</span><span class="num">{{ summary.deposit_total|naira }}</span></div>
+  </aside>
+</div>
+{% endblock %}

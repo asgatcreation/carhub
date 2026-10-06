@@ -1,0 +1,55 @@
+{% extends 'users/account_base.html' %}
+{% block title %}Dashboard | CarHub{% endblock %}
+{% block account_content %}
+<div class="row between row-wrap mb-3">
+  <div>
+    <h2 class="mb-0">Welcome back{% if user.first_name %}, {{ user.first_name }}{% endif %} 👋</h2>
+    <p class="muted mb-0">Here's what's happening with your cars.</p>
+  </div>
+  <a href="{% url 'cars:listing_create' %}" class="btn btn-dark">{% icon 'plus' 18 %} List a car</a>
+</div>
+
+{% if not user.profile.is_car_seller_approved %}
+  {% if application and application.status == 'pending' %}
+    <div class="notice info mb-3">{% icon 'clock' 20 %}<div><strong>Verification in review.</strong> We received your dealer verification on {{ application.applied_at|date:'j M' }} and will respond within 2 working days.</div></div>
+  {% elif listing_stats.total %}
+    <div class="notice mb-3">{% icon 'verified' 20 %}<div class="grow"><strong>Get verified to go live instantly.</strong> Verified sellers skip the review queue and get a badge on every listing.</div><a class="btn btn-sm" href="{% url 'users:apply_seller' %}">Apply now</a></div>
+  {% endif %}
+{% else %}
+  <div class="notice success mb-3">{% icon 'verified' 20 %}<div><strong>You're a verified seller.</strong> Your listings go live as soon as you publish them.</div></div>
+{% endif %}
+
+<div class="grid grid-4 mb-3">
+  <a class="card stat-card" href="{% url 'cars:orders' %}"><span class="icon-wrap">{% icon 'receipt' 20 %}</span><strong>{{ order_count }}</strong><span>Orders</span></a>
+  <a class="card stat-card" href="{% url 'cars:saved' %}"><span class="icon-wrap">{% icon 'heart' 20 %}</span><strong>{{ saved_count }}</strong><span>Saved cars</span></a>
+  <a class="card stat-card" href="{% url 'users:inbox' %}"><span class="icon-wrap">{% icon 'message' 20 %}</span><strong>{{ unread_messages }}</strong><span>Unread messages</span></a>
+  <a class="card stat-card" href="{% url 'cars:my_listings' %}"><span class="icon-wrap">{% icon 'car' 20 %}</span><strong>{{ listing_stats.live }}</strong><span>Live listings{% if listing_stats.pending %} · {{ listing_stats.pending }} in review{% endif %}</span></a>
+</div>
+
+<div class="grid grid-2">
+  <section class="card">
+    <div class="card-head"><h3>Recent orders</h3><a href="{% url 'cars:orders' %}" class="link small">View all</a></div>
+    {% for order in recent_orders %}
+      <a class="list-item" href="{{ order.get_absolute_url }}">
+        {% with item=order.items.all.0 %}<img src="{{ item.image_url }}" alt="" style="width:64px;height:46px;border-radius:8px;object-fit:cover" referrerpolicy="no-referrer">
+        <div class="grow"><strong style="color:var(--ink)">{{ item.title }}</strong><div class="xs muted">{{ order.number }} · {{ order.created_at|date:'j M Y' }}</div></div>{% endwith %}
+        <div class="meta">{% include 'partials/order_status.html' %}</div>
+      </a>
+    {% empty %}
+      <div class="card-pad muted small">No orders yet. <a class="link" href="{% url 'cars:browse' %}">Find a car to reserve</a>.</div>
+    {% endfor %}
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h3>Notifications</h3><a href="{% url 'users:notifications' %}" class="link small">View all</a></div>
+    {% for note in recent_notifications %}
+      <a class="list-item {% if note.unread %}is-unread{% endif %}" href="{{ note.link|default:'#' }}">
+        <span class="avatar avatar-dark" style="width:32px;height:32px">{% icon 'bell' 16 %}</span>
+        <div class="grow small"><div style="color:var(--ink);font-weight:600">{{ note.message }}</div><div class="xs muted">{{ note.created_at|ago }}</div></div>
+      </a>
+    {% empty %}
+      <div class="card-pad muted small">You're all caught up.</div>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

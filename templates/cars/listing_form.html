@@ -1,0 +1,98 @@
+{% extends 'users/account_base.html' %}
+{% block title %}{% if car %}Edit {{ car.title }}{% else %}List your car{% endif %} | CarHub{% endblock %}
+{% block account_content %}
+<div class="row between row-wrap mb-2">
+  <div>
+    <h2 class="mb-0">{% if car %}Edit listing{% else %}List your car{% endif %}</h2>
+    <p class="muted mb-0">{% if user.profile.is_car_seller_approved or user.is_staff %}You're verified — your listing goes live immediately.{% else %}New listings are reviewed by our team within 24 hours.{% endif %}</p>
+  </div>
+  {% if car %}<a class="btn btn-sm" href="{{ car.get_absolute_url }}">{% icon 'eye' 16 %} View listing</a>{% endif %}
+</div>
+
+{% if form.non_field_errors %}<div class="notice danger mb-2">{% icon 'alert' 20 %}<div>{{ form.non_field_errors|join:' ' }}</div></div>{% endif %}
+{% if form.errors and not form.non_field_errors %}<div class="notice danger mb-2">{% icon 'alert' 20 %}<div>Please fix the highlighted fields below.</div></div>{% endif %}
+
+<form method="post" enctype="multipart/form-data" class="card" novalidate>
+  {% csrf_token %}
+  <datalist id="brand-options">{% for b in brands %}<option value="{{ b }}">{% endfor %}</datalist>
+
+  <div class="form-section">
+    <h3>{% icon 'camera' 20 %} Photos</h3>
+    <p>Clear, daylight photos of the front, back, sides, interior and dashboard sell cars fastest.</p>
+    {% if car %}
+      <div class="preview-grid mb-2">
+        {% for img in car.images.all %}
+          <figure>
+            <img src="{{ img.thumb }}" alt="" referrerpolicy="no-referrer">
+            {% if forloop.first %}<figcaption><span class="badge badge-brand">Cover</span></figcaption>{% endif %}
+            <button type="submit" form="delete-photo-{{ img.pk }}" class="remove icon-btn" style="width:30px;height:30px;background:#fff" aria-label="Remove photo">{% icon 'x' 16 %}</button>
+          </figure>
+        {% endfor %}
+      </div>
+    {% endif %}
+    <label class="dropzone" data-dropzone>
+      {{ form.photos }}
+      <span class="empty-icon" style="width:52px;height:52px;margin:0 auto 10px">{% icon 'upload' 24 %}</span>
+      <strong>Drag photos here or click to upload</strong>
+      <div class="small muted">JPG or PNG, up to 10 photos, 8 MB each</div>
+    </label>
+    {% for error in form.photos.errors %}<p class="error mt-1">{{ error }}</p>{% endfor %}
+    <div class="preview-grid" data-previews></div>
+  </div>
+
+  <div class="form-section">
+    <h3>{% icon 'car' 20 %} The car</h3>
+    <p>Basic details buyers filter by.</p>
+    <div class="form-grid">
+      {% include 'partials/field.html' with field=form.brand %}
+      {% include 'partials/field.html' with field=form.model %}
+      {% include 'partials/field.html' with field=form.trim %}
+      {% include 'partials/field.html' with field=form.year %}
+      {% include 'partials/field.html' with field=form.body_type %}
+      {% include 'partials/field.html' with field=form.condition %}
+      {% include 'partials/field.html' with field=form.mileage %}
+      {% include 'partials/field.html' with field=form.exterior_color %}
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h3>{% icon 'gear' 20 %} Engine &amp; specs</h3>
+    <div class="form-grid">
+      {% include 'partials/field.html' with field=form.engine_type %}
+      {% include 'partials/field.html' with field=form.engine_size %}
+      {% include 'partials/field.html' with field=form.transmission %}
+      {% include 'partials/field.html' with field=form.drivetrain %}
+      {% include 'partials/field.html' with field=form.num_seats %}
+      {% include 'partials/field.html' with field=form.interior_color %}
+      {% include 'partials/field.html' with field=form.num_previous_owners %}
+      {% include 'partials/field.html' with field=form.vin %}
+      <div class="span-2">{% include 'partials/field.html' with field=form.duty_paid %}</div>
+    </div>
+  </div>
+
+  <div class="form-section feature-checks">
+    <h3>{% icon 'check-circle' 20 %} Features</h3>
+    <p>Tick everything the car has.</p>
+    {{ form.features }}
+  </div>
+
+  <div class="form-section">
+    <h3>{% icon 'tag' 20 %} Price, location &amp; description</h3>
+    <div class="form-grid">
+      {% include 'partials/field.html' with field=form.price %}
+      {% include 'partials/field.html' with field=form.state %}
+      <div class="span-2">{% include 'partials/field.html' with field=form.location %}</div>
+      <div class="span-2">{% include 'partials/field.html' with field=form.description %}</div>
+    </div>
+  </div>
+
+  <div class="form-section row between row-wrap">
+    <span class="small muted">By publishing you confirm the car is yours to sell and the details are accurate.</span>
+    <button type="submit" class="btn btn-primary btn-lg">{% if car %}Save changes{% else %}Publish listing{% endif %}</button>
+  </div>
+</form>
+
+{% if car %}{% for img in car.images.all %}
+  <form id="delete-photo-{{ img.pk }}" method="post" action="{% url 'cars:listing_status' car.slug %}" data-confirm="Remove this photo?">{% csrf_token %}<input type="hidden" name="action" value="delete_photo"><input type="hidden" name="photo_id" value="{{ img.pk }}"></form>
+{% endfor %}{% endif %}
+{% endblock %}

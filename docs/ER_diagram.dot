@@ -1,0 +1,54 @@
+digraph CarHub {
+  rankdir=LR;
+  node [shape=record, fontsize=10];
+
+  User [label="CustomUser|id:PK\nemail\nusername\nis_staff\n..."];
+  Profile [label="Profile|id:PK\nuser_id:FK\nphone\nprofile_image\n..."];
+  ProfileImage [label="ProfileImage|id:PK\nprofile_id:FK\nimage\nis_primary\n..."];
+  Application [label="Application|id:PK\nuser_id:FK\nrole\nstatus\n..."];
+  Conversation [label="Conversation|id:PK\ncreated_at\n..."];
+  Message [label="Message|id:PK\nconversation_id:FK\nsender_id:FK\ncontent\n..."];
+
+  Car [label="Car|id:PK\nbrand\nmodel\nslug\nprice\ncreated_by:FK\n...\nstock\nstatus"];
+  CarImage [label="CarImage|id:PK\ncar_id:FK\nimage\nis_primary\n..."];
+  CarVideo [label="CarVideo|id:PK\ncar_id:FK\nvideo\n..."];
+  CarSellerProfile [label="CarSellerProfile|id:PK\nuser_id:FK\ncompany_name\nmetrics..."];
+
+  MultiCart [label="MultiCart|id:PK\nuser_id:FK\nsubtotal\nitems_count\n...\ncart_type"];
+  MultiCartItem [label="MultiCartItem|id:PK\ncart_id:FK\ncontent_type\nobject_id\nprice\nquantity"];
+  Cart [label="Cart|id:PK\nuser_id:FK\nsession_key\n..."];
+  CartItem [label="CartItem|id:PK\ncart_id:FK\ncar_id:FK\nprice\nquantity"];
+  WishlistItem [label="WishlistItem|id:PK\nuser_id:FK\ncar_id:FK"];
+  SavedItem [label="SavedItem|id:PK\nuser_id:FK\ncar_id:FK\nnote"];
+
+  // Relationships
+  User -> Profile [label="1:1"];
+  Profile -> ProfileImage [label="1:N"];
+  User -> Application [label="1:N"];
+
+  Conversation -> Message [label="1:N"];
+  User -> Conversation [label="M:N (participants)"];
+  User -> Message [label="1:N (sender)"];
+
+  User -> CarSellerProfile [label="1:1"];
+  User -> Car [label="1:N (created_by)"];
+
+  Car -> CarImage [label="1:N"];
+  Car -> CarVideo [label="1:N"];
+
+  User -> Cart [label="1:N"];
+  Cart -> CartItem [label="1:N"];
+  Car -> CartItem [label="1:N"];
+
+  User -> MultiCart [label="1:N"];
+  MultiCart -> MultiCartItem [label="1:N"];
+
+  User -> WishlistItem [label="1:N"];
+  Car -> WishlistItem [label="1:N"];
+
+  User -> SavedItem [label="1:N"];
+  Car -> SavedItem [label="1:N"];
+
+  // Notes
+  note [shape=note, label="Generated: Jan 03 2026\nSource: users/models.py, cars/models.py"];
+}

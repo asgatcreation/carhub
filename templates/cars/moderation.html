@@ -1,0 +1,46 @@
+{% extends 'users/account_base.html' %}
+{% block title %}Moderation | CarHub{% endblock %}
+{% block account_content %}
+<div class="row between row-wrap mb-2">
+  <h2 class="mb-0">Listing moderation</h2>
+  <a href="{% url 'admin:cars_car_changelist' %}" class="btn btn-sm">{% icon 'external' 16 %} Open in admin</a>
+</div>
+<div class="tabs-nav">
+  <a href="?status=pending" class="{% if status == 'pending' %}is-active{% endif %}">Pending <span class="badge">{{ counts.pending|default:0 }}</span></a>
+  <a href="?status=rejected" class="{% if status == 'rejected' %}is-active{% endif %}">Rejected <span class="badge">{{ counts.rejected|default:0 }}</span></a>
+  <a href="?status=approved" class="{% if status == 'approved' %}is-active{% endif %}">Approved <span class="badge">{{ counts.approved|default:0 }}</span></a>
+</div>
+
+{% for car in page_obj %}
+  <div class="card mb-2" style="overflow:hidden">
+    <div class="line-item" style="grid-template-columns:200px minmax(0,1fr)">
+      <a class="thumb" style="width:200px" href="{{ car.get_absolute_url }}"><img src="{{ car.thumbnail }}" alt="" referrerpolicy="no-referrer"></a>
+      <div>
+        <div class="row between row-wrap">
+          <h3 class="mb-0"><a href="{{ car.get_absolute_url }}">{{ car.full_title }}</a></h3>
+          <span class="price" style="font-size:1.1rem">{{ car.price|naira }}</span>
+        </div>
+        <div class="car-specs mt-1">
+          <span>{% icon 'user' 15 %}{{ car.created_by.get_full_name|default:car.created_by.email }}</span>
+          <span>{% icon 'pin' 15 %}{{ car.location }}, {{ car.state }}</span>
+          <span>{% icon 'gauge' 15 %}{{ car.mileage|km }}</span>
+          <span>{% icon 'camera' 15 %}{{ car.images.all|length }} photos</span>
+          <span>{% icon 'clock' 15 %}{{ car.created_at|ago }}</span>
+        </div>
+        {% if car.approval_reason %}<p class="small muted mt-1 mb-0">Note: {{ car.approval_reason }}</p>{% endif %}
+        {% if status != 'approved' %}
+        <form method="post" action="{% url 'cars:moderate' car.pk %}" class="row row-wrap mt-2">
+          {% csrf_token %}
+          <input class="input grow" name="reason" placeholder="Note to seller (optional, required for rejections)" style="min-width:220px">
+          <button name="decision" value="reject" class="btn btn-sm btn-danger">Reject</button>
+          <button name="decision" value="approve" class="btn btn-sm btn-dark">{% icon 'check' 16 %} Approve</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% empty %}
+  <div class="empty"><div class="empty-icon">{% icon 'check-circle' 28 %}</div><h3>Queue is clear</h3><p>No {{ status }} listings right now.</p></div>
+{% endfor %}
+{% include 'partials/pagination.html' with page=page_obj %}
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends 'account/_auth_layout.html' %}
+{% block title %}Sign out | CarHub{% endblock %}
+{% block auth %}
+<h1>Sign out?</h1>
+<p class="muted">Your cart and saved cars stay safe in your account.</p>
+<form method="post" action="{% url 'account_logout' %}">
+  {% csrf_token %}
+  {% if redirect_field_value %}<input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">{% endif %}
+  <button class="btn btn-dark btn-lg btn-block" type="submit">Sign out</button>
+</form>
+<a class="btn btn-ghost btn-block mt-1" href="{% url 'home' %}">Cancel</a>
+{% endblock %}

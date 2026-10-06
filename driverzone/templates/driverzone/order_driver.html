@@ -1,0 +1,25 @@
+{% extends 'driverzone/base.html' %}
+{% block title %}Order Driver{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0 rounded-4">
+                <div class="card-header bg-primary text-white rounded-top-4">
+                    <h3 class="mb-0">Order Driver: {{ driver.user.get_full_name|default:driver.user.username }}</h3>
+                </div>
+                <div class="card-body">
+                    {% if order_submitted %}
+                        <div class="alert alert-success">Order placed successfully!</div>
+                    {% endif %}
+                    <form method="post" class="needs-validation" novalidate aria-label="Order driver form">
+                        {% csrf_token %}
+                        {{ order_form.as_p }}
+                        <button type="submit" class="btn btn-primary rounded-pill px-4">Order Driver</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

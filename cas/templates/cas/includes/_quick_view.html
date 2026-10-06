@@ -1,0 +1,45 @@
+<div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="qvTitle" aria-modal="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body p-3">
+        <div class="d-flex gap-3">
+          <img id="qvImage" src="" alt="" style="width:220px;height:140px;object-fit:cover;border-radius:8px">
+          <div>
+            <h5 id="qvTitle"></h5>
+            <div id="qvPrice" class="text-warning fw-bold mb-2"></div>
+            <p id="qvExcerpt" class="text-muted small"></p>
+            <a id="qvLink" class="btn trodo-cta" role="link">View product</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function openQuickView(data){
+  var modalEl = document.getElementById('quickViewModal');
+  document.getElementById('qvImage').src = data.image;
+  document.getElementById('qvImage').alt = data.title;
+  document.getElementById('qvTitle').innerText = data.title;
+  document.getElementById('qvPrice').innerText = data.price;
+  document.getElementById('qvExcerpt').innerText = data.excerpt;
+  document.getElementById('qvLink').href = data.url;
+
+  // Analytics hook (stub): send event when quick view opens
+  try{ if(window._casAnalytics){ window._casAnalytics.track && window._casAnalytics.track('quick_view_open', { id: data.id||null, title: data.title }); } }catch(e){}
+
+  var bsModal = new bootstrap.Modal(modalEl);
+  bsModal.show();
+
+  // trap focus inside modal while open
+  modalEl.addEventListener('shown.bs.modal', function(){
+    var focusable = modalEl.querySelectorAll('a, button, input, [tabindex]:not([tabindex="-1"])');
+    if(focusable.length) focusable[0].focus();
+    function keyHandler(e){ if(e.key==='Tab'){ var first=focusable[0], last=focusable[focusable.length-1]; if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); } else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); } } if(e.key==='Escape'){ bsModal.hide(); } }
+    modalEl._qv_key = keyHandler; document.addEventListener('keydown', keyHandler);
+  });
+
+  modalEl.addEventListener('hidden.bs.modal', function(){ if(modalEl._qv_key) document.removeEventListener('keydown', modalEl._qv_key); });
+}
+</script>

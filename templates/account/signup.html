@@ -1,0 +1,29 @@
+{% extends 'account/_auth_layout.html' %}
+{% block title %}Create your account | CarHub{% endblock %}
+{% block side_title %}Join thousands of Nigerians buying smarter.{% endblock %}
+{% block side_text %}Save cars, chat with verified sellers and reserve with a refundable deposit — all free.{% endblock %}
+{% block auth %}
+<h1>Create your account</h1>
+<p class="muted">It takes less than a minute.</p>
+
+{% if SOCIAL_LOGIN_ENABLED %}
+  <a class="btn btn-block btn-lg" href="/accounts/google/login/?process=login">{% icon 'google' 20 %} Sign up with Google</a>
+  <div class="auth-divider">or with email</div>
+{% endif %}
+
+<form method="post" action="{% url 'account_signup' %}" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="notice danger mb-2">{% icon 'alert' 18 %}<div>{{ form.non_field_errors|join:' ' }}</div></div>{% endif %}
+  <div class="form-grid">
+    {% include 'partials/field.html' with field=form.first_name %}
+    {% include 'partials/field.html' with field=form.last_name %}
+  </div>
+  {% include 'partials/field.html' with field=form.email %}
+  {% include 'partials/field.html' with field=form.password1 %}
+  {% include 'partials/field.html' with field=form.password2 %}
+  {% if redirect_field_value %}<input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">{% endif %}
+  <button class="btn btn-primary btn-lg btn-block" type="submit">Create account</button>
+  <p class="xs subtle mt-2 mb-0 text-center">By creating an account you agree to CarHub's terms and privacy policy.</p>
+</form>
+<p class="mt-3 text-center muted">Already have an account? <a class="link" href="{% url 'account_login' %}">Sign in</a></p>
+{% endblock %}

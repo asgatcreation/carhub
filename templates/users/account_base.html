@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+{% with path=request.path %}
+<div class="container account-layout">
+  <nav class="card account-nav" aria-label="Account">
+    <div class="nav-label">Buying</div>
+    <a href="{% url 'users:dashboard' %}" class="{% if path == '/account/' %}is-active{% endif %}">{% icon 'dashboard' 18 %} Overview</a>
+    <a href="{% url 'cars:orders' %}" class="{% if '/cars/orders' in path %}is-active{% endif %}">{% icon 'receipt' 18 %} Orders</a>
+    <a href="{% url 'cars:saved' %}">{% icon 'heart' 18 %} Saved cars{% if saved_count %}<span class="pill badge">{{ saved_count }}</span>{% endif %}</a>
+    <a href="{% url 'users:inbox' %}" class="{% if '/account/inbox' in path or '/account/conversation' in path %}is-active{% endif %}">{% icon 'message' 18 %} Messages{% if messages_unread_count %}<span class="pill badge badge-brand">{{ messages_unread_count }}</span>{% endif %}</a>
+    <a href="{% url 'users:notifications' %}" class="{% if '/account/notifications' in path %}is-active{% endif %}">{% icon 'bell' 18 %} Notifications{% if notifications_unread_count %}<span class="pill badge badge-brand">{{ notifications_unread_count }}</span>{% endif %}</a>
+    <div class="nav-label">Selling</div>
+    <a href="{% url 'cars:my_listings' %}" class="{% if '/cars/my-listings' in path %}is-active{% endif %}">{% icon 'car' 18 %} My listings</a>
+    <a href="{% url 'cars:listing_create' %}" class="{% if path == '/cars/sell/new/' %}is-active{% endif %}">{% icon 'plus' 18 %} New listing</a>
+    {% if not user.profile.is_car_seller_approved %}<a href="{% url 'users:apply_seller' %}" class="{% if '/account/verify' in path %}is-active{% endif %}">{% icon 'verified' 18 %} Get verified</a>{% endif %}
+    {% if user.is_staff %}
+      <div class="nav-label">Staff</div>
+      <a href="{% url 'cars:moderation' %}" class="{% if '/cars/moderation' in path %}is-active{% endif %}">{% icon 'moderation' 18 %} Listing moderation</a>
+      <a href="{% url 'users:applications' %}" class="{% if '/account/applications' in path %}is-active{% endif %}">{% icon 'users' 18 %} Seller applications</a>
+    {% endif %}
+    <div class="nav-label">Account</div>
+    <a href="{% url 'users:settings' %}" class="{% if '/account/settings' in path %}is-active{% endif %}">{% icon 'settings' 18 %} Settings</a>
+  </nav>
+  <div>{% block account_content %}{% endblock %}</div>
+</div>
+{% endwith %}
+{% endblock %}

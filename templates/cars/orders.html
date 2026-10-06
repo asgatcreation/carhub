@@ -1,0 +1,33 @@
+{% extends 'users/account_base.html' %}
+{% block title %}My orders | CarHub{% endblock %}
+{% block account_content %}
+<div class="row between mb-2"><h2 class="mb-0">My orders</h2></div>
+{% if orders %}
+  <div class="card">
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Order</th><th>Car</th><th>Deposit</th><th>Status</th><th>Date</th><th></th></tr></thead>
+        <tbody>
+          {% for order in orders %}
+            <tr>
+              <td><strong class="num">{{ order.number }}</strong>{% if order.provider == 'demo' %}<div class="xs subtle">Demo</div>{% endif %}</td>
+              <td>{% for item in order.items.all %}<div>{{ item.title }}</div>{% endfor %}</td>
+              <td class="num">{{ order.deposit_total|naira }}</td>
+              <td>{% include 'partials/order_status.html' %}</td>
+              <td class="small muted">{{ order.created_at|date:'j M Y' }}</td>
+              <td><a class="btn btn-sm" href="{{ order.get_absolute_url }}">View</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% else %}
+  <div class="empty">
+    <div class="empty-icon">{% icon 'receipt' 28 %}</div>
+    <h3>No orders yet</h3>
+    <p>When you reserve a car, your order and inspection details will appear here.</p>
+    <a href="{% url 'cars:browse' %}" class="btn btn-dark">Find a car</a>
+  </div>
+{% endif %}
+{% endblock %}

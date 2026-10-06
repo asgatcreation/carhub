@@ -1,0 +1,159 @@
+{% extends 'cas/base_cas.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ product.name }} — Product | CAS{% endblock %}
+
+{% block extra_css %}
+<script type="application/ld+json">{{ product_jsonld_json|safe }}</script>
+{% endblock %}
+
+{% block content %}
+<div class="cas-breadcrumb mb-3 small text-muted">
+        <a href="/cas/">Home</a> &nbsp;/&nbsp; {% if product.brand %}<a href="#">{{ product.brand.name }}</a> &nbsp;/&nbsp;{% endif %} <span>{{ product.name }}</span>
+</div>
+
+<div class="cas-card cas-product cas-product-detail">
+    <div class="row g-4 align-items-start">
+        <div class="col-lg-7">
+            <div class="cas-gallery d-flex gap-4">
+                <div class="cas-gallery-main">
+                    <img id="galleryMain" src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+                </div>
+                <div class="cas-gallery-thumbs d-none d-lg-flex flex-column">
+                    <img src="{{ product.image.url }}" class="cas-gallery-thumb active" data-index="0" alt="thumb 0" loading="lazy">
+                    {% for img in product.images.all %}
+                        <img src="{{ img.image.url }}" class="cas-gallery-thumb" data-index="{{ forloop.counter }}" alt="thumb {{ forloop.counter }}" loading="lazy">
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <h1 class="cas-product-title">{{ product.name }}</h1>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="cas-rating">
+                        {% if avg_rating %}
+                            <span class="badge bg-warning text-dark">★ {{ avg_rating }}</span>
+                            <small class="text-muted">({{ review_count }} reviews)</small>
+                        {% else %}
+                            <small class="text-muted">No ratings yet</small>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="cas-product-desc mt-3">{{ product.description|linebreaks }}</div>
+
+                <div class="cas-tabs mt-4">
+                    <div class="cas-tab active" data-target="#specs">Specs</div>
+                    <div class="cas-tab" data-target="#delivery">Delivery</div>
+                    <div class="cas-tab" data-target="#reviews">Reviews ({{ review_count }})</div>
+                </div>
+
+                <div class="mt-3 cas-tab-panels">
+                    <div id="specs" class="cas-tab-panel">
+                        <table class="table table-borderless small">
+                            <tr><th>Brand</th><td>{% if product.brand %}{{ product.brand.name }}{% endif %}</td></tr>
+                            <tr><th>Category</th><td>{% if product.category %}{{ product.category.name }}{% endif %}</td></tr>
+                            {% for attr in attributes %}
+                                <tr><th>{{ attr.name }}</th><td>{{ attr.value }}</td></tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                    <div id="delivery" class="cas-tab-panel d-none">Delivery: 2–5 business days. Shipping rates calculated at checkout.</div>
+                    <div id="reviews" class="cas-tab-panel d-none">
+                        {% for review in reviews %}
+                            <div class="border-bottom py-2">
+                                <strong>{{ review.user.get_full_name|default:review.user.username }}</strong>
+                                <span class="badge bg-warning text-dark ms-2">{{ review.rating }}/5</span>
+                                <div class="small text-muted">{{ review.created_at|date:'M d, Y' }}</div>
+                                <p class="mb-0">{{ review.comment }}</p>
+                            </div>
+                        {% empty %}
+                            <div class="text-muted">No reviews yet.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <aside class="col-lg-5">
+            <div class="cas-sticky-buy">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <div class="small text-muted">Price</div>
+                        <div class="cas-product-price">₦{{ product.price|intcomma }}</div>
+                    </div>
+                    <div>
+                        {% if product.in_stock %}
+                            <span class="badge bg-success">In stock</span>
+                        {% else %}
+                            <span class="badge bg-danger">Out of stock</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mb-3 small text-muted">Seller: <strong>{% if product.seller %}{{ product.seller.get_full_name|default:product.seller.username }}{% else %}Unknown seller{% endif %}</strong></div>
+
+                {% if product.seller %}
+                    <div class="mb-2">
+                        <button class="btn btn-outline-secondary btn-contact-seller" data-seller-id="{{ product.seller.id }}" data-product-slug="{{ product.slug }}">Contact Seller</button>
+                    </div>
+                {% endif %}
+
+                {% if product.in_stock and user.is_authenticated %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-2">
+                            <label class="form-label small text-muted" for="qty">Quantity</label>
+                            <input id="qty" name="quantity" type="number" min="1" value="1" class="form-control" style="max-width:120px;">
+                        </div>
+                        {{ order_form.as_p }}
+                        <button name="order_submit" value="1" class="btn btn-accent btn-lg w-100 rounded-pill">Buy now</button>
+                    </form>
+                {% else %}
+                    <a href="#" class="btn btn-outline-secondary w-100 rounded-pill">Notify me</a>
+                {% endif %}
+
+                <div class="mt-3 small text-muted">Secure payments • 30-day returns • Delivery available</div>
+            </div>
+
+            <div class="cas-related mt-4">
+                <div class="cas-related-title">Related products</div>
+                <div class="cas-related-list">
+                    {# Use the accessories partial to render related products (keeps CAS UI inside cas app) #}
+                    {% include 'cas/_accessories_tab.html' with accessories=related_products only %}
+                </div>
+            </aside>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Lightweight gallery + video modal + lazyload helpers
+(function(){
+    function openLightboxFromArray(gallery, index){
+        index = index || 0; var overlay = document.createElement('div'); overlay.className='lightbox-overlay';
+        overlay.innerHTML = `<div style="position:relative;max-width:90vw;max-height:90vh;margin:0 auto;"><img id="lbImg" src="${gallery[index]}" style="width:100%;height:auto;max-height:90vh;display:block;margin:0 auto;"/><button id="lbPrev" style="position:absolute;left:6px;top:50%;transform:translateY(-50%);background:none;border:none;color:#fff;font-size:2rem;">◀</button><button id="lbNext" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;color:#fff;font-size:2rem;">▶</button><button id="lbClose" style="position:absolute;right:6px;top:6px;background:none;border:none;color:#fff;font-size:1.6rem;">✕</button></div>`;
+        document.body.appendChild(overlay); var imgEl = overlay.querySelector('#lbImg'); var idx=index;
+        function show(i){ idx=(i+gallery.length)%gallery.length; imgEl.src = gallery[idx]; }
+        overlay.querySelector('#lbPrev').addEventListener('click', function(){ show(idx-1); });
+        overlay.querySelector('#lbNext').addEventListener('click', function(){ show(idx+1); });
+        overlay.querySelector('#lbClose').addEventListener('click', function(){ overlay.remove(); document.removeEventListener('keydown', onKey); });
+        function onKey(e){ if(e.key==='ArrowLeft') show(idx-1); if(e.key==='ArrowRight') show(idx+1); if(e.key==='Escape'){ overlay.remove(); document.removeEventListener('keydown', onKey); } }
+        document.addEventListener('keydown', onKey);
+    }
+
+    function buildGallery(){ var g=[]; var main=document.getElementById('galleryMain'); if(main) g.push(main.src); document.querySelectorAll('.thumb').forEach(function(t){ if(t.src) g.push(t.src); }); return g; }
+    var gallery = (function(){ try{ return {{ gallery|safe }}; } catch(e){ return null; } })() || buildGallery();
+    window.openLightbox = function(i){ openLightboxFromArray(gallery, i||0); };
+
+    document.addEventListener('DOMContentLoaded', function(){
+        document.querySelectorAll('.cas-gallery-thumb, .thumb').forEach(function(t){ t.tabIndex=0; t.setAttribute('role','button'); t.setAttribute('aria-label','View image'); t.addEventListener('click', function(){ var idx=parseInt(t.getAttribute('data-index')||0,10); document.getElementById('galleryMain').src = t.src; }); t.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); t.click(); } }); });
+
+        var openVideo = document.getElementById('openVideoBtn'); if(openVideo){ openVideo.addEventListener('click', function(){ var url='{{ product.video_url|default:"" }}'; if(!url) return; var embed=''; if(url.match(/youtube.com|youtu.be/)){ var id = (url.split('v=')[1]||url.split('/').pop()).split('&')[0]; embed='https://www.youtube.com/embed/'+id+'?autoplay=1&rel=0'; } else if(url.match(/vimeo.com/)){ embed='https://player.vimeo.com/video/'+url.split('/').pop()+'?autoplay=1'; } else embed=url; var wrapper=document.createElement('div'); wrapper.innerHTML = `<div class="modal fade" id="videoModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-body p-0"><div class="ratio ratio-16x9"><iframe src="${embed}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe></div></div></div></div></div>`; document.body.appendChild(wrapper); var modalEl = wrapper.querySelector('#videoModal'); var modal = new bootstrap.Modal(modalEl); modal.show(); modalEl.addEventListener('hidden.bs.modal', function(){ modal.dispose(); wrapper.remove(); }); }); }
+    });
+})();
+</script>
+<script src="{% static 'js/cas-accessory.js' %}"></script>
+{% endblock %}

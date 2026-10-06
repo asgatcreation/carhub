@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="hero">
+  <div class="container hero-inner">
+    <div>
+      <span class="eyebrow" style="color:var(--brand)">{% icon 'verified' 16 %} Nigeria's verified car marketplace</span>
+      <h1>Find your next car <span class="hl">without the guesswork.</span></h1>
+      <p class="lead">{{ stats.listings }} inspected cars from vetted dealers and private sellers across {{ stats.states }} states. Reserve online with a refundable deposit, pay the balance after inspection.</p>
+
+      <form class="search-panel" action="{% url 'cars:browse' %}" method="get" data-search-panel>
+        <div class="search-tabs" role="tablist">
+          <button type="button" class="is-active" data-condition="">All cars</button>
+          <button type="button" data-condition="new">Brand new</button>
+          <button type="button" data-condition="foreign_used">Foreign used</button>
+          <button type="button" data-condition="nigerian_used">Nigerian used</button>
+        </div>
+        <input type="hidden" name="condition" value="">
+        <div class="search-grid">
+          <div class="sf" style="position:relative" data-suggest>
+            <label for="hero-q">Make or model</label>
+            <input id="hero-q" type="search" name="q" placeholder="e.g. Toyota Camry" autocomplete="off">
+            <div class="suggest-list" role="listbox"></div>
+          </div>
+          <div class="sf">
+            <label for="hero-body">Body type</label>
+            <select id="hero-body" name="body">
+              <option value="">Any type</option>
+              {% for key, label, count, from in body_types %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="sf">
+            <label for="hero-budget">Max budget</label>
+            <select id="hero-budget" name="max_price">
+              <option value="">No limit</option>
+              <option value="15000000">₦15M</option>
+              <option value="25000000">₦25M</option>
+              <option value="40000000">₦40M</option>
+              <option value="60000000">₦60M</option>
+              <option value="100000000">₦100M</option>
+              <option value="200000000">₦200M</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" type="submit">{% icon 'search' 20 %} <span>Search</span></button>
+        </div>
+      </form>
+
+      <div class="quick-links">
+        <a href="{% url 'cars:browse' %}?brand=Toyota&q=Camry">Toyota Camry</a>
+        <a href="{% url 'cars:browse' %}?brand=Lexus">Lexus</a>
+        <a href="{% url 'cars:browse' %}?body=suv&max_price=50000000">SUVs under ₦50M</a>
+        <a href="{% url 'cars:browse' %}?fuel=hybrid">Hybrids</a>
+        <a href="{% url 'cars:browse' %}?state=FCT">Cars in Abuja</a>
+      </div>
+    </div>
+
+    <div class="hero-visual" aria-hidden="true">
+      {% for car in featured|slice:":3" %}
+        <a class="hero-card c{{ forloop.counter }}" href="{{ car.get_absolute_url }}" tabindex="-1">
+          <img src="{% if forloop.first %}{{ car.primary_image }}{% else %}{{ car.thumbnail }}{% endif %}" alt="" referrerpolicy="no-referrer">
+          <div class="hero-card-info"><strong>{{ car.title }}</strong><span>{{ car.price|naira_short }}</span></div>
+        </a>
+      {% endfor %}
+      <div class="hero-chip">{% icon 'shield' 20 %} Every listing reviewed by our team</div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <div class="stats-strip">
+    <div><strong class="num">{{ stats.listings }}</strong><span>Cars available now</span></div>
+    <div><strong class="num">{{ stats.sellers }}</strong><span>Verified dealers</span></div>
+    <div><strong class="num">{{ stats.states }}</strong><span>States covered</span></div>
+    <div><strong>100%</strong><span>Refundable reservation deposit</span></div>
+  </div>
+</div>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div><h2>Browse by body type</h2><p>From city sedans to seven-seat SUVs.</p></div>
+      <a href="{% url 'cars:browse' %}" class="link-arrow">All cars {% icon 'arrow-right' 18 %}</a>
+    </div>
+    <div class="type-tiles">
+      {% for key, label, count, from in body_types %}
+        <a class="type-tile" href="{% url 'cars:browse' %}?body={{ key }}">
+          {% include 'partials/body_svg.html' with type=key %}
+          <div><strong>{{ label }}</strong><br><small>{{ count }} car{{ count|pluralize }} · from {{ from|naira_short }}</small></div>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="section-head">
+      <div><span class="eyebrow">{% icon 'star' 14 %} Hand-picked</span><h2>Featured cars</h2><p>Great value listings our team recommends this week.</p></div>
+      <a href="{% url 'cars:browse' %}" class="link-arrow">View all {% icon 'arrow-right' 18 %}</a>
+    </div>
+    <div class="cars-grid">
+      {% for car in featured %}{% include 'partials/car_card.html' with saved=saved_ids %}{% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div class="container">
+    <div class="section-head" style="justify-content:center;text-align:center">
+      <div><span class="eyebrow">How it works</span><h2>Buying a car, minus the stress</h2><p>Online convenience with the safety of an in-person inspection.</p></div>
+    </div>
+    <div class="grid grid-3">
+      <div class="value-card card"><div class="icon-wrap">{% icon 'search' 22 %}</div><h3>1. Find the right car</h3><p>Filter {{ stats.listings }} reviewed listings by budget, body type, fuel and location. Chat with the seller in-app.</p></div>
+      <div class="value-card card"><div class="icon-wrap">{% icon 'lock' 22 %}</div><h3>2. Reserve with a deposit</h3><p>Pay a refundable ₦250,000 deposit through Paystack to take the car off the market while you arrange an inspection.</p></div>
+      <div class="value-card card"><div class="icon-wrap">{% icon 'car' 22 %}</div><h3>3. Inspect &amp; drive home</h3><p>Inspect with your own mechanic. Happy? Pay the balance to the seller. Not happy? Your deposit is refunded.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div><h2>Shop by brand</h2><p>The makes Nigerian drivers love most.</p></div>
+    </div>
+    <div class="brand-row">
+      {% for b in brands %}
+        <a class="brand-tile" href="{% url 'cars:browse' %}?brand={{ b.brand|urlencode }}">
+          <span class="mono">{{ b.brand|slice:":1" }}</span>
+          <span>{{ b.brand }}<small>{{ b.n }} listing{{ b.n|pluralize }}</small></span>
+        </a>
+      {% endfor %}
+    </div>
+
+    <div class="section-head mt-4">
+      <div><h2>Shop by budget</h2></div>
+    </div>
+    <div class="row row-wrap">
+      <a class="chip" href="{% url 'cars:browse' %}?max_price=20000000">Under ₦20M</a>
+      <a class="chip" href="{% url 'cars:browse' %}?min_price=20000000&max_price=40000000">₦20M – ₦40M</a>
+      <a class="chip" href="{% url 'cars:browse' %}?min_price=40000000&max_price=70000000">₦40M – ₦70M</a>
+      <a class="chip" href="{% url 'cars:browse' %}?min_price=70000000&max_price=150000000">₦70M – ₦150M</a>
+      <a class="chip" href="{% url 'cars:browse' %}?min_price=150000000">Luxury ₦150M+</a>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="section-head">
+      <div><span class="eyebrow">{% icon 'clock' 14 %} Just listed</span><h2>Latest arrivals</h2></div>
+      <a href="{% url 'cars:browse' %}?sort=newest" class="link-arrow">See what's new {% icon 'arrow-right' 18 %}</a>
+    </div>
+    <div class="cars-grid">
+      {% for car in latest %}{% include 'partials/car_card.html' with saved=saved_ids %}{% endfor %}
+    </div>
+  </div>
+</section>
+
+{% if recent %}
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="section-head"><div><h2>Recently viewed</h2></div></div>
+    <div class="cars-grid">{% for car in recent %}{% include 'partials/car_card.html' with saved=saved_ids %}{% endfor %}</div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="cta-band">
+      <div>
+        <h2>Selling a car? Reach serious buyers.</h2>
+        <p>List for free in under 5 minutes. Verified dealers go live instantly.</p>
+      </div>
+      <div class="row row-wrap">
+        <a href="{% url 'cars:listing_create' %}" class="btn btn-primary btn-lg">{% icon 'plus' 20 %} List your car</a>
+        <a href="{% url 'cars:sell' %}" class="btn btn-lg" style="--btn-bg:transparent;--btn-fg:#fff;--btn-line:rgba(255,255,255,.3)">How it works</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

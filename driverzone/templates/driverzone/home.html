@@ -1,0 +1,36 @@
+{% extends 'driverzone/base.html' %}
+{% block title %}DriverZone Home{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0" style="color:#FFC107;font-weight:900;">Find a Driver</h1>
+    <form class="d-flex" method="get" role="search" aria-label="Search drivers">
+        <input class="form-control form-control-sm me-2" type="search" placeholder="Search drivers" aria-label="Search" name="q" value="{{ q }}">
+        <select class="form-select form-select-sm me-2" name="available" aria-label="Availability filter">
+            <option value="1" {% if available == '1' %}selected{% endif %}>Available</option>
+            <option value="0" {% if available == '0' %}selected{% endif %}>All</option>
+        </select>
+        <button class="btn btn-sm btn-warning" type="submit">Filter</button>
+    </form>
+</div>
+<div class="row g-4">
+    {% for driver in drivers %}
+    <div class="col-md-4">
+        <div class="card shadow-lg border-0 mb-3" style="background:linear-gradient(120deg,#FFD740 80%,#181818 100%);color:#232323;border-radius:18px;">
+            <img src="{{ driver.photo.url }}" class="card-img-top" alt="{{ driver.user.get_full_name }}" title="Click to zoom" role="button" style="height:180px;object-fit:cover;border-radius:18px 18px 0 0;" onclick="openImageZoom('{{ driver.photo.url }}', '{{ driver.user.get_full_name|escapejs }}')">
+            <div class="card-body">
+                <h3 class="card-title" style="color:#232323;font-weight:700;">{{ driver.user.get_full_name|default:driver.user.username }}</h3>
+                <p>{{ driver.bio }}</p>
+                {% if driver.is_available %}
+                <span class="badge bg-success">Available</span>
+                {% else %}
+                <span class="badge bg-secondary">Unavailable</span>
+                {% endif %}
+                <a href="{% url 'driverzone:driver_detail' driver.pk %}" class="btn btn-warning btn-sm mt-2">View Profile</a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center text-warning">No drivers available.</div>
+    {% endfor %}
+</div>
+{% endblock %}

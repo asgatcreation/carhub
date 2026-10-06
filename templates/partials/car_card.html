@@ -1,0 +1,37 @@
+{# Usage: {% include 'partials/car_card.html' with car=car saved=saved_ids %} #}
+<article class="car-card">
+  <div class="car-media">
+    <img src="{{ car.thumbnail }}" alt="{{ car.full_title }}" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+    <div class="tags">
+      {% if car.condition == 'new' %}<span class="badge badge-brand">Brand new</span>{% endif %}
+      {% if car.status == 'reserved' %}<span class="badge badge-dark">Reserved</span>{% endif %}
+      {% if car.engine_type == 'electric' %}<span class="badge badge-dark">{% icon 'zap' 12 %} Electric</span>
+      {% elif car.engine_type == 'hybrid' %}<span class="badge badge-dark">{% icon 'leaf' 12 %} Hybrid</span>{% endif %}
+    </div>
+    <span class="photo-count badge badge-dark">{% icon 'camera' 12 %} {{ car.images.all|length }}</span>
+  </div>
+  <button type="button" class="save-btn {% if car.pk in saved %}is-saved{% endif %}" data-save="{% url 'cars:wishlist_toggle' car.pk %}"
+          aria-pressed="{% if car.pk in saved %}true{% else %}false{% endif %}" aria-label="Save {{ car.full_title }}">
+    <svg class="icon i-outline" width="20" height="20"><use href="#i-heart"></use></svg>
+    <svg class="icon i-filled" width="20" height="20"><use href="#i-heart"></use></svg>
+  </button>
+  <div class="car-body">
+    <h3 class="car-title"><a href="{{ car.get_absolute_url }}">{{ car.title }}</a> <span class="car-trim">{{ car.trim }}</span></h3>
+    <div class="car-specs">
+      <span>{% icon 'gauge' 15 %}{{ car.mileage|km }}</span>
+      <span>{% icon 'fuel' 15 %}{{ car.get_engine_type_display }}</span>
+      <span>{% icon 'gear' 15 %}{{ car.get_transmission_display }}</span>
+      <span>{% icon 'tag' 15 %}{{ car.get_condition_display }}</span>
+    </div>
+    {% with seller=car.created_by %}{% if seller %}
+      <div class="seller-line">
+        {% if seller.profile.is_verified %}<span class="verified" title="Verified seller">{% icon 'verified' 15 %}</span>{% endif %}
+        {{ seller.profile.company_name|default:seller.get_full_name }}
+      </div>
+    {% endif %}{% endwith %}
+    <div class="car-foot">
+      <div class="price">{{ car.price|naira }}</div>
+      <span class="car-loc" title="{{ car.location }}, {{ car.state }}">{% icon 'pin' 14 %}{{ car.location }}</span>
+    </div>
+  </div>
+</article>

@@ -1,0 +1,34 @@
+{% extends 'users/account_base.html' %}
+{% block title %}Get verified | CarHub{% endblock %}
+{% block account_content %}
+<h2>Become a verified seller</h2>
+<p class="muted">Verified sellers' listings go live instantly and carry a {% icon 'verified' 15 'verified' %} badge buyers trust.</p>
+{% if pending %}
+  <div class="notice info">{% icon 'clock' 20 %}<div><strong>Your application is in review.</strong> Submitted {{ pending.applied_at|date:'j M Y' }}. We'll notify you as soon as it's processed.</div></div>
+{% else %}
+  <form method="post" enctype="multipart/form-data" class="card" novalidate>
+    {% csrf_token %}
+    <div class="form-section">
+      <h3>{% icon 'user' 20 %} About you</h3>
+      <div class="form-grid">
+        {% include 'partials/field.html' with field=form.full_name %}
+        {% include 'partials/field.html' with field=form.phone %}
+        {% include 'partials/field.html' with field=form.company_name %}
+        {% include 'partials/field.html' with field=form.experience_years %}
+        <div class="span-2">{% include 'partials/field.html' with field=form.address %}</div>
+      </div>
+    </div>
+    <div class="form-section">
+      <h3>{% icon 'shield' 20 %} Identity</h3>
+      <p>Used only to verify you — never shown publicly.</p>
+      <div class="form-grid">
+        {% include 'partials/field.html' with field=form.id_type %}
+        {% include 'partials/field.html' with field=form.id_number %}
+        <div class="span-2">{% include 'partials/field.html' with field=form.documents %}</div>
+        <div class="span-2">{% include 'partials/field.html' with field=form.additional_info %}</div>
+      </div>
+    </div>
+    <div class="form-section row between"><span class="small muted">Reviewed within 2 working days.</span><button class="btn btn-dark">Submit application</button></div>
+  </form>
+{% endif %}
+{% endblock %}

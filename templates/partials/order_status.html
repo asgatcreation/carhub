@@ -1,0 +1,4 @@
+{% if order.status == 'paid' %}<span class="badge badge-success">{% icon 'check' 12 %} Deposit paid</span>
+{% elif order.status == 'pending' %}<span class="badge badge-warning">Awaiting payment</span>
+{% elif order.status == 'failed' %}<span class="badge badge-danger">Payment failed</span>
+{% else %}<span class="badge">{{ order.get_status_display }}</span>{% endif %}

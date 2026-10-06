@@ -1,0 +1,83 @@
+from django import forms
+from django.conf import settings
+from django.contrib import messages
+from django.core.mail import mail_admins
+from django.db.models import Count, Min
+from django.shortcuts import redirect, render
+
+from cars import services
+from cars.models import BODY_TYPE_CHOICES, Car
+from users.models import Profile
+
+
+def home(request):
+    public = Car.objects.public().select_related('created_by__profile').prefetch_related('images')
+    body_counts = dict(public.values_list('body_type').annotate(n=Count('id')))
+    body_from = dict(public.values_list('body_type').annotate(p=Min('price')))
+    return render(request, 'core/home.html', {
+        'featured': public.filter(featured=True).order_by('?')[:8],
+        'latest': public.order_by('-created_at')[:8],
+        'body_types': [(key, label, body_counts.get(key, 0), body_from.get(key)) for key, label in BODY_TYPE_CHOICES
+                       if body_counts.get(key)],
+        'brands': public.values('brand').annotate(n=Count('id')).order_by('-n')[:12],
+        'stats': {
+            'listings': public.count(),
+            'sellers': Profile.objects.filter(is_verified=True).count(),
+            'states': public.values('state').distinct().count(),
+        },
+        'recent': services.recently_viewed(request, limit=4),
+        'saved_ids': set(services.wishlist_car_ids(request)),
+    })
+
+
+def about(request):
+    return render(request, 'core/about.html', {
+        'listings': Car.objects.public().count(),
+        'sellers': Profile.objects.filter(is_verified=True).count(),
+    })
+
+
+class ContactForm(forms.Form):
+    TOPICS = [('buying', 'Buying a car'), ('selling', 'Selling a car'), ('order', 'An existing order'), ('other', 'Something else')]
+    name = forms.CharField(max_length=100)
+    email = forms.EmailField()
+    topic = forms.ChoiceField(choices=TOPICS)
+    message = forms.CharField(widget=forms.Textarea(attrs={'rows': 5}), min_length=10, max_length=3000)
+
+
+def contact(request):
+    initial = {}
+    if request.user.is_authenticated:
+        initial = {'name': request.user.get_full_name(), 'email': request.user.email}
+    form = ContactForm(request.POST or None, initial=initial)
+    if request.method == 'POST' and form.is_valid():
+        data = form.cleaned_data
+        mail_admins(f"[{settings.SITE_NAME}] {dict(ContactForm.TOPICS)[data['topic']]} — {data['name']}",
+                    f"From: {data['name']} <{data['email']}>\n\n{data['message']}", fail_silently=True)
+        messages.success(request, "Thanks — we've received your message and will reply within one working day.")
+        return redirect('contact')
+    return render(request, 'core/contact.html', {'form': form})
+
+
+def coming_soon(request, section):
+    pages = {
+        'accessories': {
+            'title': 'Accessories & parts', 'icon': 'wrench',
+            'lead': 'Genuine parts, tyres and accessories from verified vendors — delivered across Nigeria.',
+            'points': ['OEM and aftermarket parts matched to your car', 'Verified vendors with ratings', 'Pay on delivery in major cities'],
+        },
+        'drivers': {
+            'title': 'Hire a driver', 'icon': 'steering',
+            'lead': 'Book vetted, licensed drivers by the hour, day or for interstate trips.',
+            'points': ['Licence and background checks', 'Transparent daily rates', 'Rate every trip'],
+        },
+    }
+    return render(request, 'core/coming_soon.html', {'page': pages[section], 'section': section})
+
+
+def page_not_found(request, exception):
+    return render(request, '404.html', status=404)
+
+
+def server_error(request):
+    return render(request, '500.html', status=500)

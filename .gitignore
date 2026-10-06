@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Django
+.env
+db.sqlite3
+db.sqlite3.*
+*.log
+staticfiles/
+media/
+
+# Secrets & local files
+login.txt
+*.tgz
+
+# Node
+node_modules/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local tooling
+.claude/

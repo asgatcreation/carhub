@@ -1,0 +1,16 @@
+<svg class="body-svg" viewBox="0 0 160 60" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if type == 'suv' %}
+  <path d="M10 44V30l10-14h76l22 14 22 4c4 1 6 4 6 8v2"/><path d="M20 16v14h96"/><path d="M60 16v14"/>
+{% elif type == 'pickup' %}
+  <path d="M10 44V30l12-14h44v14h80v14"/><path d="M66 30H22"/><path d="M44 16v14"/>
+{% elif type == 'hatchback' %}
+  <path d="M14 44V32l18-16h48l26 16 30 4c4 1 6 4 6 8"/><path d="M32 16 22 32h84"/><path d="M68 16v16"/>
+{% elif type == 'van' %}
+  <path d="M10 44V14h96l24 18 16 4c2 1 4 3 4 6v2"/><path d="M10 30h120"/><path d="M50 14v16M86 14v16"/>
+{% elif type == 'coupe' %}
+  <path d="M10 44v-8l30-6 22-12h40l26 12 22 4c3 1 5 4 5 8v2"/><path d="M62 18l-10 12h76"/>
+{% else %}
+  <path d="M8 44v-8l22-6 20-14h50l24 14 20 4c3 1 6 4 6 8v2"/><path d="M50 16 40 30h84"/><path d="M76 16v14"/>
+{% endif %}
+  <path d="M8 44h20M52 44h56M132 44h20"/><circle cx="40" cy="44" r="10"/><circle cx="120" cy="44" r="10"/>
+</svg>

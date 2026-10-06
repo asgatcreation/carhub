@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ car.full_title }} for sale in {{ car.state }} — {{ car.price|naira }} | CarHub{% endblock %}
+{% block meta_description %}{{ car.full_title }}, {{ car.mileage|km }}, {{ car.get_condition_display|lower }}, {{ car.get_engine_type_display|lower }}. {{ car.price|naira }} in {{ car.location }}, {{ car.state }}.{% endblock %}
+{% block body_class %}has-sticky-buy{% endblock %}
+
+{% block head %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Car",
+  "name": "{{ car.full_title|escapejs }}",
+  "brand": {"@type": "Brand", "name": "{{ car.brand|escapejs }}"},
+  "model": "{{ car.model|escapejs }}",
+  "vehicleModelDate": "{{ car.year }}",
+  "mileageFromOdometer": {"@type": "QuantitativeValue", "value": {{ car.mileage }}, "unitCode": "KMT"},
+  "image": "{{ car.primary_image|escapejs }}",
+  "offers": {"@type": "Offer", "priceCurrency": "NGN", "price": "{{ car.price|floatformat:0 }}",
+             "availability": "https://schema.org/{% if car.is_available %}InStock{% else %}SoldOut{% endif %}"}
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top:20px">
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="{% url 'home' %}">Home</a>{% icon 'chevron-right' 14 %}
+    <a href="{% url 'cars:browse' %}">Cars</a>{% icon 'chevron-right' 14 %}
+    <a href="{% url 'cars:browse' %}?brand={{ car.brand|urlencode }}">{{ car.brand }}</a>{% icon 'chevron-right' 14 %}
+    <span>{{ car.model }}</span>
+  </nav>
+
+  {% if is_owner or user.is_staff %}{% if car.approval_status != 'approved' %}
+    <div class="notice {% if car.approval_status == 'rejected' %}danger{% endif %} mb-2">
+      {% icon 'info' 20 %}
+      <div class="grow">
+        <strong>{% if car.approval_status == 'pending' %}This listing is waiting for review{% else %}This listing was not approved{% endif %}</strong>
+        <div class="small">Only you{% if user.is_staff %} and moderators{% endif %} can see this page.{% if car.approval_reason %} Moderator note: {{ car.approval_reason }}{% endif %}</div>
+      </div>
+      {% if is_owner %}<a class="btn btn-sm" href="{% url 'cars:listing_edit' car.slug %}">{% icon 'edit' 16 %} Edit listing</a>{% endif %}
+    </div>
+  {% endif %}{% endif %}
+
+  <div class="row between row-wrap detail-title">
+    <div>
+      <div class="row row-wrap mb-1" style="gap:6px">
+        <span class="badge {% if car.condition == 'new' %}badge-brand{% endif %}">{{ car.get_condition_display }}</span>
+        {% if car.condition_grade %}<span class="badge badge-success">{% icon 'check' 12 %} {{ car.get_condition_grade_display }} condition</span>{% endif %}
+        {% if car.duty_paid %}<span class="badge">{% icon 'shield' 12 %} Duty paid</span>{% endif %}
+        {% if car.status == 'reserved' %}<span class="badge badge-warning">Reserved</span>{% elif car.status == 'sold' %}<span class="badge badge-danger">Sold</span>{% endif %}
+      </div>
+      <h1>{{ car.title }} <span class="car-trim" style="font-weight:600">{{ car.trim }}</span></h1>
+      <div class="row row-wrap muted small">
+        <span class="row" style="gap:4px">{% icon 'pin' 16 %} {{ car.location }}{% if car.location != car.state %}, {{ car.state }}{% endif %}</span>
+        <span class="row" style="gap:4px">{% icon 'eye' 16 %} {{ car.views_count|add:1 }} views</span>
+        <span class="row" style="gap:4px">{% icon 'clock' 16 %} Listed {{ car.created_at|ago }}</span>
+      </div>
+    </div>
+    <div class="row">
+      <button type="button" class="btn btn-sm" data-share>{% icon 'share' 16 %} Share</button>
+      <button type="button" class="btn btn-sm save-inline {% if saved %}is-saved{% endif %}" data-save="{% url 'cars:wishlist_toggle' car.pk %}" aria-pressed="{{ saved|yesno:'true,false' }}">
+        {% icon 'heart' 16 %} <span data-save-label>{% if saved %}Saved{% else %}Save{% endif %}</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="container detail-layout">
+  <div class="stack" style="--gap:24px">
+    {# ---------- Gallery ---------- #}
+    <div class="gallery" data-gallery>
+      <div class="gallery-main" data-gallery-main>
+        <img src="{% if images %}{{ images.0.src }}{% else %}{{ car.primary_image }}{% endif %}" alt="{{ car.full_title }}" referrerpolicy="no-referrer">
+        {% if images|length > 1 %}
+          <button type="button" class="gallery-nav prev" data-gallery-prev aria-label="Previous photo">{% icon 'chevron-left' 22 %}</button>
+          <button type="button" class="gallery-nav next" data-gallery-next aria-label="Next photo">{% icon 'chevron-right' 22 %}</button>
+          <span class="gallery-counter badge badge-dark" data-gallery-counter>1 / {{ images|length }}</span>
+        {% endif %}
+      </div>
+      {% if images|length > 1 %}
+        <div class="gallery-thumbs">
+          {% for img in images %}
+            <button type="button" class="{% if forloop.first %}is-active{% endif %}" data-thumb data-src="{{ img.src }}"
+                    data-author="{{ img.credit }}" data-license="{{ img.license }}" data-source="{{ img.source_url }}" aria-label="Show photo {{ forloop.counter }}">
+              <img src="{{ img.thumb }}" alt="" loading="lazy" referrerpolicy="no-referrer">
+            </button>
+          {% endfor %}
+        </div>
+      {% endif %}
+      <p class="photo-credit mb-0" data-gallery-credit>
+        {% with first=images.0 %}{% if first.credit %}Photo: {{ first.credit }} · <a href="{{ first.source_url }}" target="_blank" rel="noopener">{{ first.license }}</a> via Wikimedia Commons{% endif %}{% endwith %}
+      </p>
+    </div>
+
+    {# ---------- Key specs ---------- #}
+    <div class="key-specs">
+      <div>{% icon 'calendar' 20 %}<small>Year</small><strong>{{ car.year }}</strong></div>
+      <div>{% icon 'gauge' 20 %}<small>Mileage</small><strong>{{ car.mileage|km }}</strong></div>
+      <div>{% icon 'fuel' 20 %}<small>Fuel</small><strong>{{ car.get_engine_type_display }}</strong></div>
+      <div>{% icon 'gear' 20 %}<small>Transmission</small><strong>{{ car.get_transmission_display }}</strong></div>
+    </div>
+
+    {# ---------- Overview ---------- #}
+    <section class="card card-pad" id="overview">
+      <h2 style="font-size:1.35rem">Overview</h2>
+      <p style="white-space:pre-line">{{ car.description|default:'The seller has not added a description yet.' }}</p>
+    </section>
+
+    {# ---------- Specifications ---------- #}
+    <section class="card card-pad" id="specs">
+      <h2 style="font-size:1.35rem">Specifications</h2>
+      <div class="spec-cols">
+        <table class="spec-table">
+          <tr><th>Make</th><td>{{ car.brand }}</td></tr>
+          <tr><th>Model</th><td>{{ car.model }}</td></tr>
+          {% if car.trim %}<tr><th>Trim</th><td>{{ car.trim }}</td></tr>{% endif %}
+          <tr><th>Body type</th><td>{{ car.get_body_type_display }}</td></tr>
+          <tr><th>Engine</th><td>{{ car.engine_size|default:'—' }}</td></tr>
+          <tr><th>Drivetrain</th><td>{{ car.get_drivetrain_display }}</td></tr>
+          <tr><th>Seats</th><td>{{ car.num_seats }}</td></tr>
+        </table>
+        <table class="spec-table">
+          <tr><th>Condition</th><td>{{ car.get_condition_display }}</td></tr>
+          <tr><th>Previous owners</th><td>{{ car.num_previous_owners|default:'—' }}</td></tr>
+          <tr><th>Exterior</th><td>{{ car.exterior_color|default:'—' }}</td></tr>
+          <tr><th>Interior</th><td>{{ car.interior_color|default:'—' }}</td></tr>
+          <tr><th>Made in</th><td>{{ car.country_of_origin|default:'—' }}</td></tr>
+          <tr><th>Warranty</th><td>{{ car.warranty|default:'None' }}</td></tr>
+          <tr><th>VIN</th><td class="num">{% if car.vin %}{{ car.vin|slice:':11' }}••••••{% else %}—{% endif %}</td></tr>
+        </table>
+      </div>
+    </section>
+
+    {% if features_by_group %}
+    <section class="card card-pad" id="features">
+      <h2 style="font-size:1.35rem">Features</h2>
+      <div class="grid grid-2" style="gap:24px">
+        {% for group, items in features_by_group.items %}
+          <div>
+            <h4 class="muted" style="font-family:var(--font);font-size:.8rem;text-transform:uppercase;letter-spacing:.07em">{{ group }}</h4>
+            <ul class="feature-list" style="grid-template-columns:1fr">{% for f in items %}<li>{% icon 'check-circle' 18 %} {{ f.name }}</li>{% endfor %}</ul>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <section class="card card-pad">
+      <h2 style="font-size:1.35rem">Buying safely on CarHub</h2>
+      <ul class="safety-tips">
+        <li>{% icon 'check-circle' 18 %} Always inspect the car in person — bring a mechanic you trust.</li>
+        <li>{% icon 'check-circle' 18 %} Reserve through CarHub so your deposit is protected and refundable if the car isn't as described.</li>
+        <li>{% icon 'check-circle' 18 %} Verify the VIN, customs papers and proof of ownership before paying the balance.</li>
+        <li>{% icon 'check-circle' 18 %} Keep conversations on CarHub messages so we can help if anything goes wrong.</li>
+      </ul>
+    </section>
+  </div>
+
+  {# ---------- Aside ---------- #}
+  <aside class="detail-aside">
+    <div class="card buy-box">
+      <div class="price-row">
+        <div>
+          <div class="small muted">Price</div>
+          <div class="price price-lg">{{ car.price|naira }}</div>
+        </div>
+        {% if car.condition != 'new' %}<span class="badge badge-success">Negotiable</span>{% endif %}
+      </div>
+
+      {% if car.is_available %}
+        <div class="deposit-note">
+          {% icon 'lock' 18 %}
+          <div>Reserve it today for a <strong>{{ deposit|naira }}</strong> refundable deposit. Pay the remaining {{ balance|naira }} after you've inspected the car.</div>
+        </div>
+        {% if not is_owner %}
+        <form method="post" action="{% url 'cars:cart_add' car.pk %}" class="actions" data-cart-form>
+          {% csrf_token %}
+          <button type="submit" name="buy_now" value="1" class="btn btn-primary btn-lg">{% icon 'lock' 20 %} Reserve now</button>
+          <button type="submit" class="btn btn-lg">{% icon 'bag' 20 %} <span data-in-cart-label>{% if in_cart %}In your cart{% else %}Add to cart{% endif %}</span></button>
+        </form>
+        {% else %}
+          <a href="{% url 'cars:listing_edit' car.slug %}" class="btn btn-dark btn-block mt-2">{% icon 'edit' 18 %} Edit your listing</a>
+        {% endif %}
+        <div class="secure-note">{% icon 'shield' 16 %} Payments secured by Paystack</div>
+      {% else %}
+        <div class="notice mt-2">{% icon 'info' 20 %}<div>This car has been {{ car.get_status_display|lower }}. <a class="link" href="{% url 'cars:browse' %}?brand={{ car.brand|urlencode }}&body={{ car.body_type }}">See similar cars</a></div></div>
+      {% endif %}
+    </div>
+
+    {% if seller %}
+    <div class="card seller-card">
+      <div class="seller-head">
+        <span class="avatar avatar-lg avatar-dark">{% if seller_profile.avatar_url %}<img src="{{ seller_profile.avatar_url }}" alt="">{% else %}{{ seller|initials }}{% endif %}</span>
+        <div class="grow">
+          <div class="small muted">{% if seller_profile.company_name %}Dealer{% else %}Private seller{% endif %}</div>
+          <a href="{% url 'cars:seller_profile' seller.pk %}" style="font-weight:750;color:var(--ink)">{{ seller_profile.company_name|default:seller.get_full_name }}</a>
+          {% if seller_profile.is_verified %}<div class="row small" style="gap:4px;color:var(--info)">{% icon 'verified' 15 %} Verified seller</div>{% endif %}
+        </div>
+      </div>
+      <div class="seller-meta">
+        <div><strong>{% if rating.avg %}{{ rating.avg|floatformat:1 }}{% else %}—{% endif %}</strong><small>{{ rating.n }} review{{ rating.n|pluralize }}</small></div>
+        <div><strong>{{ seller_listings }}</strong><small>Listings</small></div>
+        {% if seller_profile.years_in_business %}<div><strong>{{ seller_profile.years_in_business }} yrs</strong><small>In business</small></div>
+        {% else %}<div><strong>{{ seller.date_joined|date:'Y' }}</strong><small>Member since</small></div>{% endif %}
+      </div>
+
+      {% if not is_owner and seller_profile.chat_enabled %}
+        {% if user.is_authenticated %}
+          <form method="post" action="{% url 'cars:contact_seller' car.slug %}">
+            {% csrf_token %}
+            <label class="label" for="msg">Message the seller</label>
+            <textarea id="msg" name="message" class="input mt-1" rows="3" required maxlength="2000">Hi, is this {{ car.title }} still available?</textarea>
+            <div class="row row-wrap mt-1" style="gap:6px">
+              <button type="button" class="badge" data-quick="Can I bring a mechanic to inspect it this week?">Inspection?</button>
+              <button type="button" class="badge" data-quick="What is your best price for this car?">Best price?</button>
+              <button type="button" class="badge" data-quick="Has the car ever been in an accident?">Accident history?</button>
+            </div>
+            <button class="btn btn-dark btn-block mt-2">{% icon 'send' 18 %} Send message</button>
+          </form>
+        {% else %}
+          <a href="{% url 'account_login' %}?next={{ request.path|urlencode }}" class="btn btn-dark btn-block">{% icon 'message' 18 %} Sign in to message seller</a>
+        {% endif %}
+      {% endif %}
+      <a href="{% url 'cars:seller_profile' seller.pk %}" class="link-arrow small mt-2" style="display:inline-flex">View seller profile {% icon 'arrow-right' 16 %}</a>
+    </div>
+    {% endif %}
+
+    <div class="card calc" data-calc data-price="{{ car.price|floatformat:0 }}">
+      <h3 style="font-size:1.05rem">Estimate monthly payments</h3>
+      <div class="calc-row"><label for="down">Down payment</label><span data-out="down"></span></div>
+      <input type="range" id="down" name="down" min="10" max="70" step="5" value="30">
+      <div class="calc-row mt-1"><label for="months">Duration</label><span data-out="months"></span></div>
+      <input type="range" id="months" name="months" min="12" max="60" step="6" value="36">
+      <div class="calc-row mt-1"><label for="rate">Interest rate</label><span data-out="rate"></span></div>
+      <input type="range" id="rate" name="rate" min="10" max="35" step="0.5" value="24">
+      <div class="divider"></div>
+      <div class="row between"><span class="muted small">Estimated monthly</span><output data-out="monthly"></output></div>
+      <p class="xs subtle mt-1 mb-0">Illustration only — actual terms depend on your lender.</p>
+    </div>
+  </aside>
+</div>
+
+{% if similar %}
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="section-head"><div><h2>Similar cars</h2><p>Same type or make, in a similar price range.</p></div></div>
+    <div class="cars-grid">{% for car in similar %}{% include 'partials/car_card.html' with saved=saved_ids %}{% endfor %}</div>
+  </div>
+</section>
+{% endif %}
+
+{% if recent %}
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="section-head"><div><h2>Recently viewed</h2></div></div>
+    <div class="cars-grid">{% for car in recent %}{% include 'partials/car_card.html' with saved=saved_ids %}{% endfor %}</div>
+  </div>
+</section>
+{% endif %}
+
+{% if car.is_available and not is_owner %}
+<div class="sticky-buy">
+  <div class="grow"><div class="xs muted">{{ car.title }}</div><div class="price" style="font-size:1.15rem">{{ car.price|naira }}</div></div>
+  <form method="post" action="{% url 'cars:cart_add' car.pk %}">{% csrf_token %}<button name="buy_now" value="1" class="btn btn-primary">Reserve now</button></form>
+</div>
+{% endif %}
+
+<div class="lightbox" id="lightbox" role="dialog" aria-label="Photo viewer">
+  <button type="button" class="icon-btn lb-close" aria-label="Close" style="color:#fff">{% icon 'x' 26 %}</button>
+  {% if images|length > 1 %}<button type="button" class="gallery-nav prev" data-gallery-prev aria-label="Previous">{% icon 'chevron-left' 24 %}</button>{% endif %}
+  <img src="" alt="{{ car.full_title }}" referrerpolicy="no-referrer">
+  {% if images|length > 1 %}<button type="button" class="gallery-nav next" data-gallery-next aria-label="Next">{% icon 'chevron-right' 24 %}</button>{% endif %}
+  <div class="lb-caption"></div>
+</div>
+{% endblock %}

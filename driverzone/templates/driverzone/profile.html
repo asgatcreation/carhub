@@ -1,0 +1,25 @@
+{% extends 'driverzone/base.html' %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0 rounded-4">
+                <div class="card-header bg-primary text-white rounded-top-4">
+                    <h3 class="mb-0">My Profile</h3>
+                </div>
+                <div class="card-body">
+                    <p><strong>Username:</strong> {{ user.username }}</p>
+                    <p><strong>Email:</strong> {{ user.email }}</p>
+                    {% if user.driver_profile %}
+                    <p><strong>Driver Availability:</strong> {% if user.driver_profile.is_available %}<span class="badge bg-success">Available</span>{% else %}<span class="badge bg-danger">Unavailable</span>{% endif %}</p>
+                    <a href="{% url 'driverzone:toggle_availability' %}" class="btn btn-sm btn-outline-primary">Toggle Availability</a>
+                    {% endif %}
+                    <p><strong>Full Name:</strong> {{ user.get_full_name }}</p>
+                    <!-- Add more profile details as needed -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

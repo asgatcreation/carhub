@@ -1,0 +1,37 @@
+{% extends 'users/account_base.html' %}
+{% block title %}Chat with {{ other.get_full_name|default:other.email }} | CarHub{% endblock %}
+{% block account_content %}
+<div class="card chat" data-chat data-convo="{{ convo.pk }}" data-poll-url="{% url 'users:conversation_poll' convo.pk %}" data-last-id="{{ last_id }}" data-ws="{{ CHAT_WEBSOCKETS|yesno:'1,' }}">
+  <div class="chat-head">
+    <a href="{% url 'users:inbox' %}" class="icon-btn" aria-label="Back to messages">{% icon 'arrow-left' 20 %}</a>
+    <span class="avatar">{% if other.profile.avatar_url %}<img src="{{ other.profile.avatar_url }}" alt="">{% else %}{{ other|initials }}{% endif %}</span>
+    <div class="grow">
+      <strong style="color:var(--ink)">{{ other.profile.company_name|default:other.get_full_name|default:other.email }}</strong>
+      <div class="xs muted">{% if other.profile.is_verified %}Verified seller · {% endif %}{% if reply_minutes %}Usually replies in about {{ reply_minutes }} min{% else %}On CarHub since {{ other.date_joined|date:'Y' }}{% endif %}</div>
+    </div>
+    <a class="btn btn-sm hide-sm" href="{% url 'cars:seller_profile' other.pk %}">Profile</a>
+  </div>
+  {% if convo.car %}
+    <a class="chat-car" href="{{ convo.car.get_absolute_url }}">
+      <img src="{{ convo.car.thumbnail }}" alt="" referrerpolicy="no-referrer">
+      <div class="grow"><strong style="color:var(--ink)">{{ convo.car.full_title }}</strong><div class="muted xs">{{ convo.car.location }}, {{ convo.car.state }}</div></div>
+      <span class="price" style="font-size:1rem">{{ convo.car.price|naira }}</span>
+    </a>
+  {% endif %}
+  <div class="chat-thread" data-thread>
+    {% for m in thread %}
+      {% ifchanged m.created_at.date %}<span class="chat-day">{{ m.created_at|date:'l, j M' }}</span>{% endifchanged %}
+      <div class="bubble {% if m.sender_id == user.pk %}mine{% endif %}" data-id="{{ m.pk }}">{{ m.content }}<time>{{ m.created_at|time:'H:i' }}</time></div>
+    {% empty %}
+      <p class="muted small text-center">Say hello 👋</p>
+    {% endfor %}
+  </div>
+  <div class="typing" data-typing></div>
+  <form class="chat-form" method="post" action="{% url 'users:conversation' convo.pk %}" data-chat-form>
+    {% csrf_token %}
+    <label class="sr-only" for="chat-input">Message</label>
+    <textarea id="chat-input" name="content" rows="1" placeholder="Write a message…" maxlength="2000" required></textarea>
+    <button class="btn btn-dark" type="submit" aria-label="Send">{% icon 'send' 18 %}</button>
+  </form>
+</div>
+{% endblock %}

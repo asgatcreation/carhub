@@ -1,0 +1,20 @@
+{% extends 'users/account_base.html' %}
+{% block title %}Notifications | CarHub{% endblock %}
+{% block account_content %}
+<h2>Notifications</h2>
+{% if notes %}
+  <div class="card">
+    {% for note in notes %}
+      <a class="list-item {% if note.unread %}is-unread{% endif %}" href="{{ note.link|default:'#' }}">
+        <span class="avatar {% if note.verb == 'approved' %}{% else %}avatar-dark{% endif %}" style="width:36px;height:36px">
+          {% if note.verb == 'message' %}{% icon 'message' 16 %}{% elif note.verb == 'approved' %}{% icon 'check' 16 %}{% elif note.verb == 'rejected' %}{% icon 'alert' 16 %}{% else %}{% icon 'bell' 16 %}{% endif %}
+        </span>
+        <div class="grow"><div style="color:var(--ink);font-weight:{% if note.unread %}700{% else %}500{% endif %}">{{ note.message }}</div><div class="xs muted">{{ note.created_at|ago }}</div></div>
+        {% if note.link %}<span class="meta">{% icon 'chevron-right' 18 %}</span>{% endif %}
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty"><div class="empty-icon">{% icon 'bell' 28 %}</div><h3>No notifications</h3><p>We'll let you know about messages, orders and listing reviews here.</p></div>
+{% endif %}
+{% endblock %}

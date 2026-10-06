@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Sell your car fast in Nigeria | CarHub{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="container hero-inner" style="grid-template-columns:1.1fr .9fr">
+    <div>
+      <span class="eyebrow" style="color:var(--brand)">{% icon 'tag' 16 %} Sell on CarHub</span>
+      <h1>Sell your car to <span class="hl">serious buyers.</span></h1>
+      <p class="lead">Free to list. Buyers reserve with a deposit before they visit — so no more time-wasters. Verified dealers go live instantly.</p>
+      <div class="row row-wrap mt-3">
+        <a href="{% url 'cars:listing_create' %}" class="btn btn-primary btn-lg">{% icon 'plus' 20 %} List your car — it's free</a>
+        <a href="{% url 'users:apply_seller' %}" class="btn btn-lg" style="--btn-bg:transparent;--btn-fg:#fff;--btn-line:rgba(255,255,255,.3)">I'm a dealer</a>
+      </div>
+      <div class="hero-trust"><span>{% icon 'check-circle' 18 %} {{ live_count }} live listings</span><span>{% icon 'check-circle' 18 %} {{ seller_count }} active sellers</span><span>{% icon 'check-circle' 18 %} No listing fees</span></div>
+    </div>
+    <div class="card card-pad" style="color:var(--text)">
+      <h3>What sellers get</h3>
+      <ul class="safety-tips" style="font-size:.95rem">
+        <li>{% icon 'check-circle' 18 %} A listing page with gallery, specs and finance estimates</li>
+        <li>{% icon 'check-circle' 18 %} In-app messaging — your number stays private</li>
+        <li>{% icon 'check-circle' 18 %} Buyers pay a refundable deposit to reserve</li>
+        <li>{% icon 'check-circle' 18 %} Views, saves and enquiries on your dashboard</li>
+        <li>{% icon 'check-circle' 18 %} Reviews that build your reputation</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head" style="justify-content:center;text-align:center"><div><span class="eyebrow">Three steps</span><h2>From listing to sold</h2></div></div>
+    <div class="steps">
+      <div class="card step"><h3>Create your listing</h3><p class="muted mb-0">Add photos, specs and your price. It takes about five minutes — we'll suggest details as you type.</p></div>
+      <div class="card step"><h3>Quick review</h3><p class="muted mb-0">Our team checks every new listing within 24 hours. Verified dealers skip the queue and go live instantly.</p></div>
+      <div class="card step"><h3>Meet reserved buyers</h3><p class="muted mb-0">Buyers chat with you in-app and reserve with a deposit before inspection. Mark the car sold when you're done.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="container container-narrow">
+    <h2 class="text-center mb-3">Seller questions</h2>
+    <div class="faq card card-pad">
+      <details open><summary>How much does it cost to list?</summary><p>Listing is free. CarHub earns a small commission only when a buyer completes a reservation.</p></details>
+      <details><summary>Why is my listing "pending review"?</summary><p>New sellers' listings are checked by our team to keep the marketplace free of scams and duplicate ads. Getting verified as a dealer removes this step.</p></details>
+      <details><summary>How do deposits work?</summary><p>The buyer pays a ₦250,000 refundable deposit to reserve your car. The car is hidden from other buyers while they arrange an inspection, then they pay you the balance directly.</p></details>
+      <details><summary>Can I edit or remove my listing?</summary><p>Yes — manage everything from <a class="link" href="{% url 'cars:my_listings' %}">My listings</a>, including marking the car as sold.</p></details>
+    </div>
+  </div>
+</section>
+{% endblock %}

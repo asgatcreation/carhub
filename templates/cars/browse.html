@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ heading }} | CarHub{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div class="container">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="{% url 'home' %}">Home</a>{% icon 'chevron-right' 14 %}<span>Cars for sale</span></nav>
+    <h1>{{ heading }}</h1>
+    <p class="muted mb-0"><strong class="num" style="color:var(--ink)">{{ page_obj.paginator.count }}</strong> car{{ page_obj.paginator.count|pluralize }} match your search · every listing reviewed by our team</p>
+  </div>
+</div>
+
+<div class="container browse-layout">
+  <form class="filters" id="filter-form" method="get" action="{% url 'cars:browse' %}" aria-label="Filters">
+    <div class="filters-head">
+      <h3>{% icon 'sliders' 18 %} Filters</h3>
+      <div class="row">
+        {% if active_filters %}<a href="{% url 'cars:browse' %}" class="link small">Clear all</a>{% endif %}
+        <button type="button" class="icon-btn filters-close" data-drawer-close aria-label="Close filters">{% icon 'x' 20 %}</button>
+      </div>
+    </div>
+    {% if form.q.value %}<input type="hidden" name="q" value="{{ form.q.value }}">{% endif %}
+    {% if sort and sort != 'newest' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+
+    <div class="filter-group">
+      <h4>Condition</h4>
+      <div class="seg">
+        <label><input type="radio" name="condition" value="" {% if not form.condition.value %}checked{% endif %}><span>Any</span></label>
+        {% for value, label in form.fields.condition.choices %}{% if value %}
+          <label><input type="radio" name="condition" value="{{ value }}" {% if form.condition.value == value %}checked{% endif %}><span>{{ label }}</span></label>
+        {% endif %}{% endfor %}
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <h4>Price (₦)</h4>
+      <div class="range-pair">
+        <div class="field"><label class="sr-only" for="min_price">Minimum price</label><input class="input" type="number" id="min_price" name="min_price" placeholder="Min" min="0" step="500000" value="{{ form.min_price.value|default:'' }}"></div>
+        <div class="field"><label class="sr-only" for="max_price">Maximum price</label><input class="input" type="number" id="max_price" name="max_price" placeholder="Max" min="0" step="500000" value="{{ form.max_price.value|default:'' }}"></div>
+      </div>
+      <div class="row row-wrap mt-1" style="gap:6px">
+        <a class="badge" href="{% url_replace max_price=20000000 min_price='' page='' %}">Under ₦20M</a>
+        <a class="badge" href="{% url_replace min_price=20000000 max_price=50000000 page='' %}">₦20–50M</a>
+        <a class="badge" href="{% url_replace min_price=50000000 max_price='' page='' %}">₦50M+</a>
+      </div>
+      <button type="submit" class="btn btn-sm btn-block mt-2 hide-sm">Apply price</button>
+    </div>
+
+    <div class="filter-group">
+      <h4>Body type</h4>
+      <div class="seg">
+        <label><input type="radio" name="body" value="" {% if not form.body.value %}checked{% endif %}><span>Any</span></label>
+        {% for value, label in body_types %}{% if body_counts|get_item:value or form.body.value == value %}
+          <label><input type="radio" name="body" value="{{ value }}" {% if form.body.value == value %}checked{% endif %}><span>{{ label }}{% if body_counts|get_item:value %} <small class="subtle">{{ body_counts|get_item:value }}</small>{% endif %}</span></label>
+        {% endif %}{% endfor %}
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <h4>Make</h4>
+      <div class="brand-list">
+        <label><input type="radio" name="brand" value="" {% if not form.brand.value %}checked{% endif %}> All makes</label>
+        {% for b in brands %}
+          <label><input type="radio" name="brand" value="{{ b.brand }}" {% if form.brand.value == b.brand %}checked{% endif %}> {{ b.brand }} <span class="count">{{ b.n }}</span></label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <h4>Year</h4>
+      <div class="range-pair">
+        <div class="field"><label class="sr-only" for="min_year">From year</label>
+          <select class="input" id="min_year" name="min_year"><option value="">From</option>{% for y in year_options %}<option value="{{ y }}" {% if form.min_year.value|stringformat:'s' == y %}selected{% endif %}>{{ y }}</option>{% endfor %}</select></div>
+        <div class="field"><label class="sr-only" for="max_year">To year</label>
+          <select class="input" id="max_year" name="max_year"><option value="">To</option>{% for y in year_options %}<option value="{{ y }}" {% if form.max_year.value|stringformat:'s' == y %}selected{% endif %}>{{ y }}</option>{% endfor %}</select></div>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <h4>Mileage</h4>
+      <div class="field"><label class="sr-only" for="max_mileage">Maximum mileage</label>
+        <select class="input" id="max_mileage" name="max_mileage">
+          <option value="">Any mileage</option>
+          {% for km in mileage_options %}<option value="{{ km }}" {% if form.max_mileage.value|stringformat:'s' == km %}selected{% endif %}>Under {{ km|km }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <h4>Fuel</h4>
+      <div class="seg">
+        <label><input type="radio" name="fuel" value="" {% if not form.fuel.value %}checked{% endif %}><span>Any</span></label>
+        {% for value, label in form.fields.fuel.choices %}{% if value %}
+          <label><input type="radio" name="fuel" value="{{ value }}" {% if form.fuel.value == value %}checked{% endif %}><span>{{ label }}</span></label>
+        {% endif %}{% endfor %}
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <h4>Transmission</h4>
+      <div class="seg">
+        <label><input type="radio" name="transmission" value="" {% if not form.transmission.value %}checked{% endif %}><span>Any</span></label>
+        <label><input type="radio" name="transmission" value="automatic" {% if form.transmission.value == 'automatic' %}checked{% endif %}><span>Automatic</span></label>
+        <label><input type="radio" name="transmission" value="manual" {% if form.transmission.value == 'manual' %}checked{% endif %}><span>Manual</span></label>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <h4>Location</h4>
+      <div class="field"><label class="sr-only" for="state">State</label>{{ form.state.as_widget }}</div>
+    </div>
+
+    <div class="filters-foot">
+      <button type="submit" class="btn btn-dark btn-block">Show results</button>
+    </div>
+  </form>
+
+  <section aria-label="Results">
+    <div class="results-bar">
+      <button type="button" class="btn btn-sm filters-toggle" data-drawer-open="filter-form">{% icon 'sliders' 18 %} Filters{% if active_filters %} · {{ active_filters|length }}{% endif %}</button>
+      <span class="muted small hide-sm">Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</span>
+      <form class="sort" method="get">
+        {% for key, values in request.GET.lists %}{% if key != 'sort' and key != 'page' %}{% for v in values %}<input type="hidden" name="{{ key }}" value="{{ v }}">{% endfor %}{% endif %}{% endfor %}
+        <label for="sort-select" class="small muted">Sort by</label>
+        <select id="sort-select" name="sort" class="input">
+          {% for value, label in form.fields.sort.choices %}<option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+        <noscript><button class="btn btn-sm">Sort</button></noscript>
+      </form>
+    </div>
+
+    {% if active_filters %}
+      <div class="active-filters">
+        {% for chip in active_filters %}
+          <a class="chip chip-remove" href="{{ chip.remove_url }}" aria-label="Remove filter {{ chip.label }}">{{ chip.label }} {% icon 'x' 14 %}</a>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if page_obj.object_list %}
+      <div class="cars-grid">
+        {% for car in page_obj %}{% include 'partials/car_card.html' with saved=saved_ids %}{% endfor %}
+      </div>
+      {% include 'partials/pagination.html' with page=page_obj %}
+    {% else %}
+      <div class="empty">
+        <div class="empty-icon">{% icon 'search' 28 %}</div>
+        <h3>No cars match those filters</h3>
+        <p>Try widening your budget, choosing a different make, or removing a filter or two.</p>
+        <a href="{% url 'cars:browse' %}" class="btn btn-dark">Reset filters</a>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

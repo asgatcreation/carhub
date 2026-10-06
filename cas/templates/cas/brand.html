@@ -1,0 +1,27 @@
+{% extends 'cas/base_cas.html' %}
+{% block title %}Brand: {{ brand.name }}{% endblock %}
+{% block content %}
+    <section class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Brand: {{ brand.name }}</h2>
+            <div class="text-muted-small">{{ accessories|length }} results</div>
+        </div>
+        <div class="trodo-grid">
+            {% for accessory in accessories %}
+                <div class="trodo-product-card trodo-card position-relative cas-card" role="group" aria-label="product {{ accessory.name }}">
+                    <a href="{% url 'cas:product_detail' accessory.brand_slug accessory.slug %}" class="text-decoration-none text-dark">
+                        <img src="{{ accessory.image.url }}" alt="{{ accessory.name }}" style="width:100%;height:180px;object-fit:cover;border-radius:12px">
+                        <div class="mt-2 title fw-bold">{{ accessory.name|truncatechars:60 }}</div>
+                        <div class="meta d-flex justify-content-between align-items-center mt-1">
+                            <div class="price text-warning">₦{{ accessory.price }}</div>
+                            <div class="small text-muted">{% if accessory.brand %}{{ accessory.brand.name }}{% endif %}</div>
+                        </div>
+                    </a>
+                    <button class="btn btn-sm btn-outline-secondary position-absolute" style="top:8px;left:8px;" aria-haspopup="dialog" aria-controls="quickViewModal" data-analytics-event="quick_view" data-analytics-id="{{ accessory.pk }}" onclick='openQuickView({"image":"{{ accessory.image.url }}","title":"{{ accessory.name|escapejs }}","price":"₦{{ accessory.price }}","excerpt":"{{ accessory.description|striptags|truncatechars:120|escapejs }}","url":"{% url "cas:product_detail" accessory.brand_slug accessory.slug %}"})'>Quick View</button>
+                </div>
+            {% empty %}
+                <div class="trodo-card">No products for this brand.</div>
+            {% endfor %}
+        </div>
+    </section>
+{% endblock %}

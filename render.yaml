@@ -1,0 +1,28 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# One free web service. The demo uses SQLite, which is rebuilt and re-seeded on each
+# deploy/restart (a self-resetting demo). Set DATABASE_URL to a Postgres database to persist data.
+services:
+  - type: web
+    name: carhub
+    runtime: python
+    plan: free
+    buildCommand: ./build.sh
+    startCommand: python manage.py migrate --noinput && python manage.py seed_demo --if-empty && daphne -b 0.0.0.0 -p $PORT config.asgi:application
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.5
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DEMO_CHECKOUT
+        value: "True"
+      - key: SHOW_DEMO_LOGINS
+        value: "True"
+      - key: CHAT_WEBSOCKETS
+        value: "True"
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false

@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{# Wraps every remaining allauth page (password reset, email management, …) in the CarHub layout. #}
+{% block title %}{% block head_title %}{% endblock head_title %} | CarHub{% endblock %}
+{% block page %}
+<div class="container section">
+  <div class="card card-pad allauth-card" style="max-width:520px;margin:0 auto">
+    {% block content %}{% endblock content %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}{% block extra_body %}{% endblock extra_body %}{% endblock %}

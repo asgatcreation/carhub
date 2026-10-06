@@ -1,0 +1,43 @@
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <a href="{% url 'home' %}" class="logo">{% include 'partials/logo_mark.html' %}<span>Car<em>Hub</em></span></a>
+        <p class="mt-2 small" style="max-width:34ch">Nigeria's marketplace for verified cars. Every listing is reviewed, every dealer is vetted, and every online reservation is protected.</p>
+        <div class="row mt-2 small">{% icon 'shield' 18 %} Refundable reservation deposits</div>
+      </div>
+      <div>
+        <h4>Buy</h4>
+        <ul>
+          <li><a href="{% url 'cars:browse' %}">All cars</a></li>
+          <li><a href="{% url 'cars:browse' %}?condition=new">Brand new</a></li>
+          <li><a href="{% url 'cars:browse' %}?condition=foreign_used">Foreign used</a></li>
+          <li><a href="{% url 'cars:browse' %}?fuel=electric">Electric &amp; hybrid</a></li>
+          <li><a href="{% url 'cars:browse' %}?max_price=25000000">Under ₦25M</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Sell</h4>
+        <ul>
+          <li><a href="{% url 'cars:sell' %}">How selling works</a></li>
+          <li><a href="{% url 'cars:listing_create' %}">List your car</a></li>
+          <li><a href="{% url 'users:apply_seller' %}">Become a verified dealer</a></li>
+          <li><a href="{% url 'cars:my_listings' %}">Seller dashboard</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>CarHub</h4>
+        <ul>
+          <li><a href="{% url 'about' %}">About us</a></li>
+          <li><a href="{% url 'contact' %}">Contact &amp; support</a></li>
+          <li><a href="{% url 'accessories' %}">Accessories (soon)</a></li>
+          <li><a href="{% url 'drivers' %}">Hire a driver (soon)</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© {% now 'Y' %} CarHub. A portfolio project — demo data, no real vehicles are sold.</span>
+      <span>Car photos via Wikimedia Commons, credited on each listing.</span>
+    </div>
+  </div>
+</footer>
