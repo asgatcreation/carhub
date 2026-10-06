@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/asgatcreation/carhub/actions/workflows/ci.yml/badge.svg)](https://github.com/asgatcreation/carhub/actions/workflows/ci.yml)
 
+**Live demo: [carhub-es73.onrender.com](https://carhub-es73.onrender.com/)** — sign in with one of the demo accounts on the sign-in page. Hosted on Render's free tier, so the first visit after a quiet spell can take ~30–50 seconds to wake up, and the demo data resets on each deploy.
+
 A full-stack e-commerce marketplace where buyers browse verified listings, chat with sellers and **reserve a car online with a refundable deposit**, then pay the balance after an in-person inspection. Sellers list cars in minutes, verified dealers go live instantly, and a moderation queue keeps the catalogue clean.
 
 Built with **Django 5**, **django-allauth**, **Channels (WebSockets)** and **Paystack**, with a hand-written design system (no CSS framework) and progressive-enhancement JavaScript.
@@ -126,7 +128,7 @@ Vehicle photos are hotlinked from [Wikimedia Commons](https://commons.wikimedia.
 
 ## Roadmap
 
-- Persistent Postgres + Cloudinary uploads for the hosted demo
+- Persistent Postgres + Cloudinary uploads for the hosted demo (currently a self-resetting SQLite demo)
 - Accessories store and Hire-a-driver (models scaffolded in `cas/` and `driverzone/`)
 - Saved searches with email alerts, and side-by-side car comparison
 - Refund flow for cancelled reservations (Paystack refunds API)
