@@ -26,7 +26,7 @@ def naira_compact(value):
         return '₦0'
     for size, suffix in ((Decimal(1_000_000_000), 'B'), (Decimal(1_000_000), 'M'), (Decimal(1_000), 'K')):
         if abs(amount) >= size:
-            short = (amount / size).quantize(Decimal('0.1'))
+            short = (amount / size).quantize(Decimal('0.01'))
             text = f'{short:f}'.rstrip('0').rstrip('.')
             return f'₦{text}{suffix}'
     return f'₦{int(amount):,}'

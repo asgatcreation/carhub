@@ -62,3 +62,16 @@ def valid_webhook_signature(body, signature):
         return False
     expected = hmac.new(settings.PAYSTACK_SECRET_KEY.encode(), body, hashlib.sha512).hexdigest()
     return hmac.compare_digest(expected, signature)
+
+
+def refund(reference, amount):
+    """Refund (part of) a Paystack transaction; returns True when Paystack accepted the refund."""
+    if not (is_configured() and reference):
+        return False
+    try:
+        resp = requests.post(f'{API}/refund', json={'transaction': reference, 'amount': int(amount * 100)},
+                             headers=_headers(), timeout=15)
+        return bool(resp.json().get('status'))
+    except (requests.RequestException, ValueError) as exc:
+        logger.warning('Paystack refund failed: %s', exc)
+        return False

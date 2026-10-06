@@ -1,0 +1,15 @@
+{% extends 'account/_auth_layout.html' %}
+{% block title %}Finish signing up | CarHub{% endblock %}
+{% block auth %}
+<div class="auth-icon">{% icon 'user' 26 %}</div>
+<h1>Finish creating your account</h1>
+<p class="muted">You're signing in with {{ account.get_provider.name|default:'Google' }}. Confirm your details to continue.</p>
+<form method="post" action="{% url 'socialaccount_signup' %}" novalidate data-busy>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="notice danger mb-2">{% icon 'alert' 18 %}<div>{{ form.non_field_errors|join:' ' }}</div></div>{% endif %}
+  {% for field in form.visible_fields %}{% include 'partials/field.html' %}{% endfor %}
+  {% for field in form.hidden_fields %}{{ field }}{% endfor %}
+  {{ redirect_field }}
+  <button class="btn btn-primary btn-lg btn-block" type="submit">Create account</button>
+</form>
+{% endblock %}

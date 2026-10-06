@@ -2,44 +2,89 @@
 {% block title %}{{ profile.display_name }} — cars for sale | CarHub{% endblock %}
 
 {% block content %}
-<div class="seller-hero">
-  <div class="seller-cover"></div>
-  <div class="container seller-hero-inner">
-    <span class="avatar avatar-xl {% if not profile.avatar_url %}avatar-dark{% endif %}">{% if profile.avatar_url %}<img src="{{ profile.avatar_url }}" alt="">{% else %}{{ seller|initials }}{% endif %}</span>
-    <div class="grow">
-      <div class="row row-wrap" style="gap:8px">
-        <h1 class="mb-0" style="font-size:clamp(1.5rem,3vw,2.1rem)">{{ profile.display_name }}</h1>
-        {% if profile.is_verified %}<span class="badge badge-info">{% icon 'verified' 14 %} Verified {% if profile.company_name %}dealer{% else %}seller{% endif %}</span>{% endif %}
+<section class="seller-hero-v2">
+  <div class="seller-banner" aria-hidden="true"><div class="seller-banner-art"></div></div>
+  <div class="container">
+    <div class="seller-head-card">
+      <span class="seller-avatar {% if not profile.avatar_url %}is-initials{% endif %}">{% if profile.avatar_url %}<img src="{{ profile.avatar_url }}" alt="">{% else %}{{ seller|initials }}{% endif %}{% if profile.is_verified %}<span class="seller-avatar-badge" title="Verified">{% icon 'check' 14 %}</span>{% endif %}</span>
+      <div class="seller-id">
+        <div class="eyebrow">{% if profile.company_name %}Dealership{% else %}Private seller{% endif %}{% if profile.city %} · {{ profile.city }}{% endif %}</div>
+        <h1>{{ profile.display_name }}</h1>
+        <div class="seller-tags">
+          {% if profile.is_verified %}<span class="badge badge-info">{% icon 'verified' 13 %} Verified {% if profile.company_name %}dealer{% else %}seller{% endif %}</span>{% endif %}
+          {% if agg.n %}<span class="badge"><span class="stars">{% icon 'star' 13 %}</span> {{ agg.overall|floatformat:1 }} · {{ agg.n }} review{{ agg.n|pluralize }}</span>{% endif %}
+          <span class="badge">{% icon 'calendar' 13 %} Since {{ seller.date_joined|date:'Y' }}</span>
+          {% if profile.specialization %}<span class="badge">{% icon 'tag' 13 %} {{ profile.specialization }}</span>{% endif %}
+        </div>
       </div>
-      <div class="row row-wrap muted small mt-1">
-        {% if profile.city %}<span class="row" style="gap:4px">{% icon 'pin' 15 %} {{ profile.city }}</span>{% endif %}
-        {% if agg.n %}<span class="row" style="gap:4px"><span class="stars">{% icon 'star' 15 %}</span> {{ agg.overall|floatformat:1 }} ({{ agg.n }} review{{ agg.n|pluralize }})</span>{% endif %}
-        <span>Member since {{ seller.date_joined|date:'F Y' }}</span>
-        {% if profile.specialization %}<span>· {{ profile.specialization }}</span>{% endif %}
+      <div class="seller-actions">
+        {% if profile.whatsapp_number %}
+          {% if user.is_authenticated %}<a class="btn btn-whatsapp" href="https://wa.me/{{ profile.whatsapp_number|cut:' '|cut:'+' }}" target="_blank" rel="noopener">{% icon 'whatsapp' 18 %} WhatsApp</a>
+          {% else %}<a class="btn" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">{% icon 'whatsapp' 18 %} Sign in to contact</a>{% endif %}
+        {% endif %}
+        <button class="btn" type="button" data-share="{{ request.build_absolute_uri }}" data-share-title="{{ profile.display_name }} on CarHub">{% icon 'share' 18 %} Share</button>
+        <a class="btn btn-dark" href="#inventory">{% icon 'car' 18 %} View {{ listing_count }} car{{ listing_count|pluralize }}</a>
       </div>
     </div>
-    <div class="row">
-      {% if profile.whatsapp_number and user.is_authenticated %}<a class="btn" href="https://wa.me/{{ profile.whatsapp_number|cut:' '|cut:'+' }}" target="_blank" rel="noopener">{% icon 'whatsapp' 18 %} WhatsApp</a>{% endif %}
-      <a class="btn btn-dark" href="#listings">{% icon 'car' 18 %} {{ listing_count }} car{{ listing_count|pluralize }}</a>
-    </div>
-  </div>
-</div>
 
-<div class="container detail-layout">
-  <div>
-    <section id="listings">
-      <div class="section-head"><div><h2>Cars for sale</h2></div></div>
+    <div class="seller-kpis">
+      <div><strong>{{ listing_count }}</strong><span>Cars for sale</span></div>
+      <div><strong>{{ sold_count }}</strong><span>Cars sold</span></div>
+      <div><strong>{% if agg.n %}{{ agg.overall|floatformat:1 }}<small>/5</small>{% else %}New{% endif %}</strong><span>{% if agg.n %}Buyer rating{% else %}No reviews yet{% endif %}</span></div>
+      <div><strong>{% if profile.response_rate_percent %}{{ profile.response_rate_percent }}%{% else %}—{% endif %}</strong><span>Response rate</span></div>
+      {% if price_range.low %}<div><strong>{{ price_range.low|naira_short }}<small> – {{ price_range.high|naira_short }}</small></strong><span>Price range</span></div>{% endif %}
+    </div>
+
+    <nav class="seller-tabs" aria-label="Seller sections">
+      <a href="#inventory" class="is-active">Inventory <span class="badge">{{ listing_count }}</span></a>
+      <a href="#reviews">Reviews{% if agg.n %} <span class="badge">{{ agg.n }}</span>{% endif %}</a>
+      <a href="#about">About</a>
+    </nav>
+  </div>
+</section>
+
+<div class="container seller-layout">
+  <div class="seller-main">
+    <section id="inventory" class="seller-section">
+      <div class="inventory-bar">
+        <div class="chip-row" role="list">
+          <a role="listitem" class="chip {% if not brand %}is-active{% endif %}" href="?sort={{ sort }}#inventory">All <small>{{ listing_count }}</small></a>
+          {% for b in inventory_brands %}<a role="listitem" class="chip {% if brand == b.brand %}is-active{% endif %}" href="?brand={{ b.brand|urlencode }}&amp;sort={{ sort }}#inventory">{{ b.brand }} <small>{{ b.n }}</small></a>{% endfor %}
+        </div>
+        <form method="get" class="sort-form" action="#inventory">
+          {% if brand %}<input type="hidden" name="brand" value="{{ brand }}">{% endif %}
+          <label class="sr-only" for="seller-sort">Sort</label>
+          <select id="seller-sort" name="sort" class="input input-sm" data-autosubmit>
+            <option value="newest" {% if sort == 'newest' %}selected{% endif %}>Newest first</option>
+            <option value="price_asc" {% if sort == 'price_asc' %}selected{% endif %}>Price: low to high</option>
+            <option value="price_desc" {% if sort == 'price_desc' %}selected{% endif %}>Price: high to low</option>
+            <option value="year" {% if sort == 'year' %}selected{% endif %}>Newest model year</option>
+          </select>
+          <noscript><button class="btn btn-sm">Sort</button></noscript>
+        </form>
+      </div>
       {% if listings_page.object_list %}
-        <div class="cars-grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))">
+        <div class="cars-grid seller-grid">
           {% for car in listings_page %}{% include 'partials/car_card.html' with saved=saved_ids %}{% endfor %}
         </div>
         {% include 'partials/pagination.html' with page=listings_page %}
       {% else %}
-        <div class="empty"><h3>No cars listed right now</h3><p>Check back soon.</p></div>
+        <div class="empty"><div class="empty-icon">{% icon 'car' 28 %}</div><h3>No cars listed right now</h3><p>Check back soon, or browse similar cars from other verified sellers.</p><a class="btn btn-dark" href="{% url 'cars:browse' %}">Browse all cars</a></div>
+      {% endif %}
+
+      {% if recently_sold %}
+        <div class="sold-strip">
+          <h3>{% icon 'check-circle' 18 %} Recently sold</h3>
+          <div class="sold-row">
+            {% for car in recently_sold %}
+              <div class="sold-item"><span class="sold-img"><img src="{{ car.thumbnail }}" alt="" loading="lazy" referrerpolicy="no-referrer"><span class="sold-tag">Sold</span></span><div><strong>{{ car.title }}</strong><small>{{ car.price|naira_short }}</small></div></div>
+            {% endfor %}
+          </div>
+        </div>
       {% endif %}
     </section>
 
-    <section id="reviews" class="card card-pad mt-4">
+    <section id="reviews" class="card card-pad seller-section">
       <div class="row between row-wrap"><h2 class="mb-0" style="font-size:1.35rem">Reviews</h2>{% if agg.n %}<span class="muted small">{{ agg.n }} review{{ agg.n|pluralize }}</span>{% endif %}</div>
       {% if agg.n %}
         <div class="grid grid-2 mt-2" style="align-items:center">
@@ -100,23 +145,26 @@
     </section>
   </div>
 
-  <aside class="detail-aside">
+  <aside class="seller-aside" id="about">
     <div class="card card-pad">
-      <h3>About</h3>
+      <h3>About {{ profile.display_name }}</h3>
       <p class="muted">{{ profile.business_description|default:profile.bio|default:'This seller has not added a description yet.' }}</p>
-      <div class="seller-meta" style="grid-template-columns:repeat(2,1fr)">
-        <div><strong>{{ listing_count }}</strong><small>Cars for sale</small></div>
-        <div><strong>{{ sold_count }}</strong><small>Cars sold</small></div>
-        {% if profile.years_in_business %}<div><strong>{{ profile.years_in_business }}</strong><small>Years in business</small></div>{% endif %}
-        <div><strong>{% if profile.response_rate_percent %}{{ profile.response_rate_percent }}%{% else %}—{% endif %}</strong><small>Response rate</small></div>
-      </div>
+      <ul class="about-list">
+        {% if profile.city %}<li>{% icon 'pin' 17 %}<span>Based in <strong>{{ profile.city }}</strong></span></li>{% endif %}
+        {% if profile.years_in_business %}<li>{% icon 'clock' 17 %}<span><strong>{{ profile.years_in_business }} years</strong> in business</span></li>{% endif %}
+        <li>{% icon 'user' 17 %}<span>Member since <strong>{{ seller.date_joined|date:'F Y' }}</strong></span></li>
+        {% if profile.is_verified %}<li>{% icon 'verified' 17 %}<span>Identity &amp; business <strong>verified</strong> by CarHub</span></li>{% endif %}
+      </ul>
+      {% if certifications %}<div class="divider"></div><h4 class="xs-title">Certifications</h4><div class="row row-wrap" style="gap:6px">{% for c in certifications %}<span class="badge">{% icon 'check' 12 %} {{ c }}</span>{% endfor %}</div>{% endif %}
+      {% if profile.why_choose %}<div class="divider"></div><h4 class="xs-title">Why buy here</h4><p class="small mb-0">{{ profile.why_choose }}</p>{% endif %}
     </div>
-    <div class="card card-pad">
+    <div class="card card-pad trust-card">
       <h3>Buy with confidence</h3>
       <ul class="safety-tips">
-        <li>{% icon 'shield' 18 %} Reserve through CarHub — deposits are refundable</li>
+        <li>{% icon 'shield' 18 %} Reserve with a refundable ₦250k deposit</li>
+        <li>{% icon 'calendar' 18 %} The seller confirms an inspection slot</li>
+        <li>{% icon 'check-circle' 18 %} Pay the balance only after you inspect</li>
         <li>{% icon 'message' 18 %} Keep chats on CarHub for your protection</li>
-        <li>{% icon 'check-circle' 18 %} Inspect before paying the balance</li>
       </ul>
     </div>
   </aside>

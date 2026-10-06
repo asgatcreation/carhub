@@ -3,45 +3,74 @@
 {% block account_content %}
 <a href="{% url 'cars:orders' %}" class="link-arrow small mb-2" style="display:inline-flex">{% icon 'arrow-left' 16 %} All orders</a>
 
-<div class="card">
-  {% if order.status == 'paid' %}
-    <div class="status-hero" style="border-bottom:1px solid var(--line)">
-      <div class="ok">{% icon 'check' 34 %}</div>
-      <h2>Your car{{ order.items.count|pluralize }} {{ order.items.count|pluralize:'is,are' }} reserved</h2>
-      <p class="muted mb-0">Order <strong class="num">{{ order.number }}</strong> · the seller has been notified and will contact you on {{ order.phone }} to arrange your inspection.</p>
-      {% if order.provider == 'demo' %}<span class="badge badge-info mt-2">Demo order — no payment was taken</span>{% endif %}
-    </div>
-  {% else %}
-    <div class="card-head"><h3>Order {{ order.number }}</h3>{% include 'partials/order_status.html' %}</div>
-  {% endif %}
+{% if confirmed and order.status == 'paid' %}
+  <div class="card card-pad mb-3 text-center">
+    {% include 'partials/stepper.html' with step=4 %}
+    <div class="success-burst">{% icon 'check' 40 %}</div>
+    <h2>You're all set, {{ order.full_name|default:user.first_name }}!</h2>
+    <p class="muted" style="max-width:52ch;margin:0 auto">Your deposit of <strong>{{ order.deposit_total|naira }}</strong> is secured and the seller{{ order.items.count|pluralize }} {{ order.items.count|pluralize:'has,have' }} been notified. They'll confirm an inspection time for {{ order.preferred_date|date:'l j F' }}.</p>
+    {% if order.provider == 'demo' %}<span class="badge badge-info mt-2">Demo payment: no money was taken</span>{% endif %}
+  </div>
+{% endif %}
+
+<div class="card mb-3">
+  <div class="card-head">
+    <div><h3>Order {{ order.number }}</h3><div class="xs muted">Placed {{ order.created_at|date:'j M Y, H:i' }}{% if order.payment_reference %} · Ref {{ order.payment_reference }}{% endif %}</div></div>
+    {% include 'partials/order_status.html' %}
+  </div>
 
   {% for item in order.items.all %}
-    <div class="line-item">
-      <div class="thumb">{% if item.image_url %}<img src="{{ item.image_url }}" alt="" referrerpolicy="no-referrer">{% endif %}</div>
+    <div class="reservation">
+      <a class="thumb" href="{% if item.car %}{{ item.car.get_absolute_url }}{% else %}#{% endif %}">{% if item.image_url %}<img src="{{ item.image_url }}" alt="" referrerpolicy="no-referrer">{% endif %}</a>
       <div>
-        <h3>{% if item.car %}<a href="{{ item.car.get_absolute_url }}">{{ item.title }}</a>{% else %}{{ item.title }}{% endif %}</h3>
-        {% if item.car %}<div class="small muted">{{ item.car.location }}, {{ item.car.state }} · Seller: {{ item.car.created_by.profile.company_name|default:item.car.created_by.get_full_name }}</div>{% endif %}
+        <div class="row between row-wrap" style="align-items:flex-start">
+          <div>
+            <h3 style="font-family:var(--font);font-size:1.05rem;margin-bottom:4px">{{ item.title }}</h3>
+            {% if item.seller %}<div class="small muted">Seller: <a class="link" href="{% url 'cars:seller_profile' item.seller.pk %}">{{ item.seller.profile.company_name|default:item.seller.get_full_name }}</a>{% if item.seller.profile.phone and item.is_active %} · {{ item.seller.profile.phone }}{% endif %}</div>{% endif %}
+          </div>
+          {% include 'partials/item_status.html' %}
+        </div>
+        <div class="summary-row mt-1"><span class="muted">Price</span><span class="num">{{ item.price|naira }}</span></div>
+        <div class="summary-row"><span class="muted">Deposit paid</span><span class="num">{{ item.deposit|naira }}</span></div>
+        <div class="summary-row" style="font-weight:700;color:var(--ink)"><span>Balance at inspection</span><span class="num">{{ item.balance|naira }}</span></div>
+        {% if item.status == 'scheduled' %}
+          <div class="notice info mt-2">{% icon 'calendar' 20 %}<div><strong>Inspection: {{ item.inspection_at|date:'l j F, g:i A' }}</strong><div class="small">{{ item.inspection_address }}</div>{% if item.seller_note %}<div class="small mt-1">“{{ item.seller_note }}”</div>{% endif %}</div></div>
+        {% endif %}
+        {% if item.status == 'cancelled' and item.cancel_reason %}<p class="small muted mt-2 mb-0">Reason: {{ item.cancel_reason }}</p>{% endif %}
       </div>
-      <div style="text-align:right"><div class="num" style="font-weight:800;color:var(--ink)">{{ item.price|naira }}</div><div class="xs muted">Deposit {{ item.deposit|naira }}</div></div>
+      <div>
+        <ol class="timeline">
+          {% for label, when, state in item.timeline %}
+            <li class="{{ state }}"><span class="dot">{% if state == 'done' %}{% icon 'check' 13 %}{% elif state == 'cancelled' %}{% icon 'x' 13 %}{% endif %}</span>
+              <strong>{{ label }}</strong>{% if when %}<small>{{ when|date:'j M, g:i A' }}</small>{% endif %}</li>
+          {% endfor %}
+        </ol>
+        {% if item.is_active %}
+          <details class="inline-panel mt-2">
+            <summary class="btn btn-sm btn-danger">{% icon 'x' 14 %} Cancel reservation</summary>
+            <form method="post" action="{% url 'cars:order_item_cancel' item.pk %}" data-confirm="Cancel this reservation? The car will be released to other buyers.">
+              {% csrf_token %}
+              <div class="field mb-1"><label for="reason-{{ item.pk }}">{{ cancel_form.reason.label }}</label>
+                <textarea id="reason-{{ item.pk }}" name="reason" rows="2" required maxlength="500" placeholder="e.g. Found another car / failed inspection"></textarea></div>
+              <button class="btn btn-sm btn-danger">Confirm cancellation &amp; refund</button>
+            </form>
+          </details>
+        {% endif %}
+      </div>
     </div>
   {% endfor %}
 
   <div class="card-pad" style="border-top:1px solid var(--line)">
     <div class="grid grid-2">
-      <div>
-        <h4>What happens next</h4>
-        <ol class="small muted" style="padding-left:18px;margin:0;display:grid;gap:6px">
-          <li>The seller confirms an inspection time with you.</li>
-          <li>Inspect the car{% if order.inspection_state %} in {{ order.inspection_state }}{% endif %} — bring your mechanic.</li>
-          <li>Happy? Pay the balance of <strong>{{ order.balance_due|naira }}</strong> and collect your keys.</li>
-          <li>Not as described? Your deposit is refunded in full.</li>
-        </ol>
+      <div class="small">
+        <h4>Inspection preference</h4>
+        <div class="muted">{{ order.inspection_state|default:'Not set' }}{% if order.preferred_date %} · {{ order.preferred_date|date:'D j M' }} · {{ order.get_preferred_time_display }}{% endif %}</div>
+        {% if order.notes %}<div class="muted mt-1">“{{ order.notes }}”</div>{% endif %}
       </div>
       <div>
-        <div class="summary-row"><span class="muted">Vehicles total</span><span class="num">{{ order.vehicles_total|naira }}</span></div>
+        <div class="summary-row"><span class="muted">Total price</span><span class="num">{{ order.vehicles_total|naira }}</span></div>
         <div class="summary-row"><span class="muted">Deposit {% if order.status == 'paid' %}paid{% else %}due{% endif %}</span><span class="num">{{ order.deposit_total|naira }}</span></div>
         <div class="summary-row total"><span>Balance at inspection</span><span class="num">{{ order.balance_due|naira }}</span></div>
-        <div class="xs subtle mt-1">Placed {{ order.created_at|date:'j M Y, H:i' }}{% if order.payment_reference %} · Ref {{ order.payment_reference }}{% endif %}</div>
       </div>
     </div>
   </div>

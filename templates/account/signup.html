@@ -6,12 +6,9 @@
 <h1>Create your account</h1>
 <p class="muted">It takes less than a minute.</p>
 
-{% if SOCIAL_LOGIN_ENABLED %}
-  <a class="btn btn-block btn-lg" href="/accounts/google/login/?process=login">{% icon 'google' 20 %} Sign up with Google</a>
-  <div class="auth-divider">or with email</div>
-{% endif %}
+{% include 'partials/google_button.html' with label='Sign up with Google' divider='or sign up with email' %}
 
-<form method="post" action="{% url 'account_signup' %}" novalidate>
+<form method="post" action="{% url 'account_signup' %}" novalidate data-busy>
   {% csrf_token %}
   {% if form.non_field_errors %}<div class="notice danger mb-2">{% icon 'alert' 18 %}<div>{{ form.non_field_errors|join:' ' }}</div></div>{% endif %}
   <div class="form-grid">

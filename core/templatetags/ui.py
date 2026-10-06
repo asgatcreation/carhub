@@ -70,3 +70,28 @@ def ago(value):
     from django.utils.timesince import timesince
     first = timesince(value).split(',')[0].replace('\xa0', ' ')
     return 'just now' if first.startswith('0 ') else f'{first} ago'
+
+
+@register.filter
+def monthly(price, months=36):
+    """Indicative monthly repayment: 30% down, 24% APR over 36 months (matches the detail-page calculator)."""
+    try:
+        principal = float(price) * 0.7
+    except (TypeError, ValueError):
+        return ''
+    rate = 0.24 / 12
+    payment = principal * rate / (1 - (1 + rate) ** -int(months))
+    return naira_compact(round(payment, -3))
+
+
+@register.filter
+def absval(value):
+    try:
+        return abs(value)
+    except TypeError:
+        return value
+
+
+@register.filter
+def split(value, sep=','):
+    return [part.strip() for part in str(value).split(sep) if part.strip()]

@@ -4,9 +4,9 @@
 {% block content %}
 <div class="page-head">
   <div class="container">
-    <div class="steps-bar"><span class="is-current"><span class="step-num">1</span>Cart</span>{% icon 'chevron-right' 14 %}<span><span class="step-num">2</span>Details &amp; payment</span>{% icon 'chevron-right' 14 %}<span><span class="step-num">3</span>Inspection</span></div>
+    {% include 'partials/stepper.html' with step=1 %}
     <h1>Your cart</h1>
-    <p class="muted mb-0">Reserve the cars you love with a refundable deposit — pay the balance only after inspection.</p>
+    <p class="muted mb-0">Reserve the cars you love with a refundable deposit. You only pay the balance after you've inspected the car.</p>
   </div>
 </div>
 
@@ -37,6 +37,11 @@
           </div>
         {% endfor %}
       </div>
+      <div class="grid grid-3 mt-3" style="gap:12px">
+        <div class="panel-muted small"><strong style="color:var(--ink)">{% icon 'lock' 16 %} Secure deposit</strong><div class="muted mt-1">Paid through Paystack. Never sent straight to the seller.</div></div>
+        <div class="panel-muted small"><strong style="color:var(--ink)">{% icon 'calendar' 16 %} Held for you</strong><div class="muted mt-1">The car is taken off the market while you arrange an inspection.</div></div>
+        <div class="panel-muted small"><strong style="color:var(--ink)">{% icon 'shield' 16 %} Fully refundable</strong><div class="muted mt-1">Cancel before buying, or if the car isn't as described.</div></div>
+      </div>
       <a href="{% url 'cars:browse' %}" class="link-arrow mt-3" style="display:inline-flex">{% icon 'arrow-left' 18 %} Keep browsing</a>
     {% else %}
       <div class="empty">
@@ -50,12 +55,13 @@
 
   {% if cars %}
   <aside class="card summary">
-    <h3>Order summary</h3>
-    <div class="summary-row"><span class="muted">Vehicles ({{ summary.count }})</span><span class="num">{{ summary.vehicles_total|naira }}</span></div>
-    <div class="summary-row"><span class="muted">Balance due at inspection</span><span class="num">{{ summary.balance_total|naira }}</span></div>
-    <div class="summary-row total"><span>Due today (deposit)</span><span class="num">{{ summary.deposit_total|naira }}</span></div>
-    <a href="{% url 'cars:checkout' %}" class="btn btn-primary btn-lg btn-block mt-2">Continue to checkout {% icon 'arrow-right' 18 %}</a>
-    <div class="deposit-note">{% icon 'shield' 18 %}<div>Deposits are <strong>fully refundable</strong> if the car fails inspection or isn't as described.</div></div>
+    {% include 'partials/order_summary.html' %}
+    {% if user.is_authenticated %}
+      <a href="{% url 'cars:checkout' %}" class="btn btn-primary btn-lg btn-block mt-2">Continue to checkout {% icon 'arrow-right' 18 %}</a>
+    {% else %}
+      <a href="{% url 'account_login' %}?next={% url 'cars:checkout' %}" class="btn btn-primary btn-lg btn-block mt-2">{% icon 'lock' 18 %} Sign in to check out</a>
+      <p class="xs subtle mt-1 mb-0 text-center">Your cart is saved and follows you after you sign in.</p>
+    {% endif %}
     <div class="secure-note">{% icon 'lock' 16 %} Secure payment via Paystack</div>
   </aside>
   {% endif %}

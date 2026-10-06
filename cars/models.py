@@ -356,7 +356,7 @@ def _order_number():
 
 
 class Order(models.Model):
-    """A reservation order: the buyer pays a refundable deposit per car to hold it."""
+    """One checkout: the buyer pays a refundable deposit per car (one OrderItem per car)."""
     STATUS_CHOICES = [
         ('pending', 'Awaiting payment'),
         ('paid', 'Deposit paid'),
@@ -365,7 +365,12 @@ class Order(models.Model):
     ]
     PROVIDER_CHOICES = [
         ('paystack', 'Paystack'),
-        ('demo', 'Demo checkout'),
+        ('demo', 'Demo payment'),
+    ]
+    TIME_SLOTS = [
+        ('morning', 'Morning (9am – 12pm)'),
+        ('afternoon', 'Afternoon (12pm – 3pm)'),
+        ('evening', 'Late afternoon (3pm – 6pm)'),
     ]
     number = models.CharField(max_length=16, unique=True, default=_order_number, editable=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='orders', on_delete=models.PROTECT)
@@ -377,6 +382,8 @@ class Order(models.Model):
     email = models.EmailField()
     phone = models.CharField(max_length=30)
     inspection_state = models.CharField(max_length=40, choices=STATE_CHOICES, blank=True)
+    preferred_date = models.DateField(null=True, blank=True)
+    preferred_time = models.CharField(max_length=20, choices=TIME_SLOTS, blank=True)
     notes = models.TextField(blank=True)
 
     vehicles_total = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0'))
@@ -408,16 +415,72 @@ class Order(models.Model):
             self.payment_reference = reference
         self.save(update_fields=['status', 'paid_at', 'payment_reference'])
         Car.objects.filter(order_items__order=self, status='available').update(status='reserved')
+        self.items.filter(status='awaiting_payment').update(status='reserved', updated_at=timezone.now())
+        from .services import on_order_paid
+        on_order_paid(self)
         return True
 
 
 class OrderItem(models.Model):
+    """A single car reservation inside an order, with its own lifecycle managed by buyer and seller."""
+    STATUS_CHOICES = [
+        ('awaiting_payment', 'Awaiting payment'),
+        ('reserved', 'Reserved — awaiting seller'),
+        ('scheduled', 'Inspection scheduled'),
+        ('completed', 'Purchase completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    REFUND_CHOICES = [
+        ('', 'No refund'),
+        ('requested', 'Refund processing'),
+        ('refunded', 'Deposit refunded'),
+    ]
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
     car = models.ForeignKey(Car, related_name='order_items', on_delete=models.SET_NULL, null=True)
+    seller = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='sales', on_delete=models.SET_NULL, null=True)
     title = models.CharField(max_length=200)
     image_url = models.CharField(max_length=500, blank=True)
     price = models.DecimalField(max_digits=14, decimal_places=2)
     deposit = models.DecimalField(max_digits=14, decimal_places=2)
 
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='awaiting_payment')
+    inspection_at = models.DateTimeField(null=True, blank=True)
+    inspection_address = models.CharField(max_length=255, blank=True)
+    seller_note = models.TextField(blank=True)
+    cancel_reason = models.TextField(blank=True)
+    cancelled_by = models.CharField(max_length=10, blank=True)  # 'buyer' | 'seller' | 'staff'
+    refund_status = models.CharField(max_length=20, choices=REFUND_CHOICES, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-order__created_at', 'id']
+
     def __str__(self):
         return f'{self.title} ({self.order.number})'
+
+    @property
+    def balance(self):
+        return self.price - self.deposit
+
+    @property
+    def is_active(self):
+        return self.status in ('reserved', 'scheduled')
+
+    def timeline(self):
+        """Order-tracking steps as (label, when, state) — state is done / current / todo / cancelled."""
+        steps = [
+            ('Deposit paid — car reserved', self.order.paid_at),
+            ('Inspection scheduled with the seller', self.inspection_at),
+            ('Balance paid & keys handed over', self.completed_at),
+        ]
+        if self.status == 'cancelled':
+            refund = 'done' if self.refund_status == 'refunded' else 'current'
+            return [
+                (steps[0][0], steps[0][1], 'done'),
+                (f'Reservation cancelled by {self.cancelled_by or "buyer"}', self.updated_at, 'cancelled'),
+                (self.get_refund_status_display() or 'Refund', None, refund),
+            ]
+        progress = {'awaiting_payment': 0, 'reserved': 1, 'scheduled': 2, 'completed': 3}[self.status]
+        return [(label, when, 'done' if i < progress else 'current' if i == progress else 'todo')
+                for i, (label, when) in enumerate(steps)]

@@ -1,0 +1,11 @@
+<tr><td class="pad" style="padding:24px 44px 8px">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff8e8;border:1px solid #ffe2a3;border-radius:16px">
+    <tr><td align="center" style="padding:26px 12px 10px;font-size:12px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#a16207">{{ code_label|default:'Your one-time code' }}</td></tr>
+    <tr><td align="center" style="padding:0 12px 14px">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+        {% for ch in code %}<td style="padding:0 4px"><div class="code-cell" style="width:48px;height:60px;line-height:60px;background:#ffffff;border:1px solid #f3cf7a;border-radius:12px;text-align:center;font-family:'SFMono-Regular',Consolas,'Courier New',monospace;font-size:30px;font-weight:800;color:#0f1419">{{ ch }}</div></td>{% endfor %}
+      </tr></table>
+    </td></tr>
+    <tr><td align="center" style="padding:0 12px 24px;font-size:13.5px;color:#92400e">Expires in <strong>{{ expires_minutes }} minutes</strong> &middot; can only be used once</td></tr>
+  </table>
+</td></tr>

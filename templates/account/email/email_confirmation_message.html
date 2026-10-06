@@ -1,0 +1,7 @@
+{% extends 'emails/base.html' %}
+{% block title %}Confirm your email{% endblock %}
+{% block preheader %}Open this email for the code that confirms your new address on CarHub.{% endblock %}
+{% block heading %}Confirm your email address{% endblock %}
+{% block intro %}{% if user.first_name %}Hi {{ user.first_name }}, {% else %}Hi there, {% endif %}enter the code below on CarHub to confirm this email address belongs to you.{% endblock %}
+{% block main %}{% include 'emails/_code.html' with expires_minutes=15 code_label='Your verification code' %}{% endblock %}
+{% block note %}Didn't request this? Ignore this email and nothing will change.{% endblock %}

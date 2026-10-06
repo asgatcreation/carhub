@@ -3,20 +3,23 @@ import hmac
 import json
 import shutil
 import tempfile
+from datetime import date, timedelta
 from decimal import Decimal
 from io import BytesIO
 from unittest import mock
 
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 from PIL import Image
 
 from users.models import Conversation, Message, Notification
 
 from . import services
-from .models import Car, CarImage, CartItem, Order, WishlistItem
+from .models import Car, CarImage, CartItem, Order, OrderItem, WishlistItem
 
 User = get_user_model()
 TEMP_MEDIA = tempfile.mkdtemp(prefix='carhub-test-media-')
@@ -132,13 +135,24 @@ class DetailTests(BaseTestCase):
 
 
 class CartTests(BaseTestCase):
-    def test_guest_cart_is_merged_on_login(self):
-        self.client.post(reverse('cars:cart_add', args=[self.car.pk]))
+    def test_guest_reserve_goes_to_login_then_checkout(self):
+        resp = self.client.post(reverse('cars:cart_add', args=[self.car.pk]), {'buy_now': '1'})
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/accounts/login/', resp['Location'])
+        self.assertIn('checkout', resp['Location'])
+        # The car is kept in the guest cart and merged into the account on sign-in.
         self.assertEqual(self.client.session[services.CART_KEY], [self.car.pk])
         self.client.post(reverse('account_login'), {'login': 'buyer@example.com', 'password': 'pass12345!'})
         self.assertTrue(CartItem.objects.filter(cart__user=self.buyer, car=self.car).exists())
 
+    def test_guest_ajax_add_asks_for_sign_in(self):
+        resp = self.client.post(reverse('cars:cart_add', args=[self.car.pk]), HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertEqual(resp.status_code, 401)
+        self.assertTrue(resp.json()['auth_required'])
+        self.assertIn('/accounts/login/', resp.json()['login_url'])
+
     def test_ajax_add_returns_count(self):
+        self.client.force_login(self.buyer)
         resp = self.client.post(reverse('cars:cart_add', args=[self.car.pk]), HTTP_X_REQUESTED_WITH='XMLHttpRequest')
         self.assertEqual(resp.json()['cart_count'], 1)
 
@@ -166,8 +180,9 @@ class CartTests(BaseTestCase):
         self.assertFalse(WishlistItem.objects.exists())
 
 
-CHECKOUT_DATA = {'full_name': 'Buyer Person', 'email': 'buyer@example.com', 'phone': '+234 803 000 0000',
-                 'inspection_state': 'Lagos', 'notes': '', 'agree': 'on'}
+CHECKOUT_DATA = {'full_name': 'Buyer Person', 'phone': '+234 803 000 0000', 'inspection_state': 'Lagos',
+                 'preferred_date': (date.today() + timedelta(days=3)).isoformat(), 'preferred_time': 'morning', 'notes': ''}
+ORDER_CONTACT = {**CHECKOUT_DATA, 'email': 'buyer@example.com', 'preferred_date': date.today() + timedelta(days=3)}
 
 
 class CheckoutTests(BaseTestCase):
@@ -176,37 +191,76 @@ class CheckoutTests(BaseTestCase):
         self.client.force_login(self.buyer)
         self.client.post(reverse('cars:cart_add', args=[self.car.pk]))
 
+    def _details(self, **overrides):
+        return self.client.post(reverse('cars:checkout'), {**CHECKOUT_DATA, **overrides})
+
     def test_checkout_requires_login(self):
         self.client.logout()
         resp = self.client.get(reverse('cars:checkout'))
         self.assertEqual(resp.status_code, 302)
         self.assertIn('/accounts/login/', resp['Location'])
 
+    def test_details_step_validates_date_and_moves_to_review(self):
+        resp = self._details(preferred_date=date.today().isoformat())
+        self.assertContains(resp, 'Choose a date from tomorrow onwards.')
+        self.assertRedirects(self._details(), reverse('cars:checkout_review'), fetch_redirect_response=False)
+
+    def test_email_is_locked_to_the_account(self):
+        resp = self.client.get(reverse('cars:checkout'))
+        self.assertContains(resp, 'buyer@example.com')
+        self._details(email='someone-else@example.com')
+        self.client.post(reverse('cars:checkout_review'), {'method': 'demo', 'agree': 'on'})
+        self.assertEqual(Order.objects.get().email, 'buyer@example.com')
+
+    def test_review_without_details_goes_back(self):
+        self.assertRedirects(self.client.get(reverse('cars:checkout_review')), reverse('cars:checkout'))
+
+    @override_settings(PAYSTACK_SECRET_KEY='', DEMO_CHECKOUT=True)
+    def test_review_shows_exact_totals(self):
+        self._details()
+        resp = self.client.get(reverse('cars:checkout_review'))
+        self.assertContains(resp, '₦25,000,000')   # exact car price, not a rounded "₦25M"
+        self.assertContains(resp, '₦250,000')      # deposit paid today
+        self.assertContains(resp, '₦24,750,000')   # balance at inspection
+
     @override_settings(PAYSTACK_SECRET_KEY='', DEMO_CHECKOUT=True)
     def test_demo_checkout_reserves_car(self):
-        resp = self.client.post(reverse('cars:checkout'), CHECKOUT_DATA)
+        self._details()
+        resp = self.client.post(reverse('cars:checkout_review'), {'method': 'demo', 'agree': 'on'})
         order = Order.objects.get()
-        self.assertRedirects(resp, order.get_absolute_url())
+        self.assertRedirects(resp, f'{order.get_absolute_url()}?confirmed=1')
         self.assertEqual((order.status, order.provider), ('paid', 'demo'))
         self.assertEqual(order.deposit_total, Decimal('250000'))
-        self.assertEqual(order.items.get().price, self.car.price)
+        item = order.items.get()
+        self.assertEqual((item.price, item.status, item.seller), (self.car.price, 'reserved', self.dealer))
         self.car.refresh_from_db()
         self.assertEqual(self.car.status, 'reserved')
         self.assertFalse(CartItem.objects.exists())
+        # Seller and buyer are both told, in-app and by email.
+        self.assertTrue(Notification.objects.filter(user=self.dealer, verb='reservation').exists())
+        self.assertEqual(sorted(m.to[0] for m in mail.outbox), ['buyer@example.com', 'dealer@example.com'])
+
+    @override_settings(PAYSTACK_SECRET_KEY='', DEMO_CHECKOUT=True)
+    def test_must_accept_terms(self):
+        self._details()
+        self.client.post(reverse('cars:checkout_review'), {'method': 'demo'})
+        self.assertFalse(Order.objects.exists())
 
     @override_settings(PAYSTACK_SECRET_KEY='', DEMO_CHECKOUT=False)
     def test_no_payment_without_provider(self):
         """Regression: the old checkout marked purchases complete when the payment provider was unavailable."""
-        self.client.post(reverse('cars:checkout'), CHECKOUT_DATA)
+        self._details()
+        self.client.post(reverse('cars:checkout_review'), {'method': 'demo', 'agree': 'on'})
         self.assertFalse(Order.objects.filter(status='paid').exists())
         self.car.refresh_from_db()
         self.assertEqual(self.car.status, 'available')
 
     @override_settings(PAYSTACK_SECRET_KEY='sk_test_x', DEMO_CHECKOUT=False)
     def test_paystack_checkout_redirects_and_waits_for_payment(self):
+        self._details()
         with mock.patch('cars.payments.requests.post') as post:
             post.return_value.json.return_value = {'status': True, 'data': {'authorization_url': 'https://checkout.paystack.com/abc'}}
-            resp = self.client.post(reverse('cars:checkout'), CHECKOUT_DATA)
+            resp = self.client.post(reverse('cars:checkout_review'), {'method': 'paystack', 'agree': 'on'})
         self.assertEqual(resp['Location'], 'https://checkout.paystack.com/abc')
         order = Order.objects.get()
         self.assertEqual(order.status, 'pending')
@@ -214,16 +268,102 @@ class CheckoutTests(BaseTestCase):
 
     @override_settings(PAYSTACK_SECRET_KEY='', DEMO_CHECKOUT=True)
     def test_checkout_rejects_car_reserved_meanwhile(self):
+        self._details()
         Car.objects.filter(pk=self.car.pk).update(status='reserved')
-        self.client.post(reverse('cars:checkout'), CHECKOUT_DATA)
+        self.client.post(reverse('cars:checkout_review'), {'method': 'demo', 'agree': 'on'})
         self.assertFalse(Order.objects.exists())
+
+
+class ReservationLifecycleTests(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.order = services.create_order(self.buyer, [self.car], ORDER_CONTACT, 'demo')
+        self.order.mark_paid('DEMO-1')
+        self.item = self.order.items.get()
+        mail.outbox.clear()
+
+    def _act(self, user, **data):
+        self.client.force_login(user)
+        return self.client.post(reverse('cars:sale_action', args=[self.item.pk]), data)
+
+    def test_seller_sees_reservation(self):
+        self.client.force_login(self.dealer)
+        resp = self.client.get(reverse('cars:sales'))
+        self.assertContains(resp, 'Buyer Person')
+        self.assertContains(resp, self.item.title)
+
+    def test_schedule_then_complete_marks_car_sold(self):
+        when = (timezone.localtime() + timedelta(days=2)).strftime('%Y-%m-%dT10:00')
+        self._act(self.dealer, action='schedule', inspection_at=when, inspection_address='Lekki showroom', seller_note='')
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.status, 'scheduled')
+        self.assertEqual(mail.outbox[-1].to, ['buyer@example.com'])
+        self._act(self.dealer, action='complete')
+        self.item.refresh_from_db()
+        self.car.refresh_from_db()
+        self.assertEqual((self.item.status, self.car.status), ('completed', 'sold'))
+        self.assertEqual([state for _, _, state in self.item.timeline()], ['done', 'done', 'done'])
+
+    def test_only_the_seller_can_act(self):
+        resp = self._act(self.buyer, action='complete')
+        self.assertEqual(resp.status_code, 404)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.status, 'reserved')
+
+    def test_buyer_cancel_releases_car_and_refunds_demo_deposit(self):
+        self.client.force_login(self.buyer)
+        self.client.post(reverse('cars:order_item_cancel', args=[self.item.pk]), {'reason': 'Changed my mind'})
+        self.item.refresh_from_db()
+        self.car.refresh_from_db()
+        self.assertEqual((self.item.status, self.item.refund_status, self.item.cancelled_by), ('cancelled', 'refunded', 'buyer'))
+        self.assertEqual(self.car.status, 'available')
+        self.assertTrue(Notification.objects.filter(user=self.dealer, verb='cancelled').exists())
+
+    def test_seller_cancel_needs_reason(self):
+        self._act(self.dealer, action='cancel', reason='')
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.status, 'reserved')
+        self._act(self.dealer, action='cancel', reason='Car failed our pre-sale check')
+        self.item.refresh_from_db()
+        self.assertEqual((self.item.status, self.item.cancelled_by), ('cancelled', 'seller'))
+
+    def test_buyer_order_page_shows_timeline(self):
+        self.client.force_login(self.buyer)
+        resp = self.client.get(self.order.get_absolute_url() + '?confirmed=1')
+        self.assertContains(resp, 'Deposit paid')
+        self.assertContains(resp, self.dealer.profile.display_name)
+
+
+class PriceInsightTests(BaseTestCase):
+    def test_cheaper_than_comparables_is_a_deal(self):
+        for price in ('30000000', '31000000', '29000000'):
+            make_car(self.dealer, price=Decimal(price))
+        cheap = make_car(self.dealer, price=Decimal('24000000'))
+        cars = services.annotate_insights(list(Car.objects.filter(pk=cheap.pk)))
+        self.assertIn(cars[0].insight['level'], ('great', 'good'))
+        self.assertLess(cars[0].insight['pct'], 0)
+
+    def test_needs_comparables(self):
+        cars = services.annotate_insights([self.car])
+        self.assertIsNone(cars[0].insight)
+
+
+class SellerPageTests(BaseTestCase):
+    def test_storefront_filters_by_brand(self):
+        make_car(self.dealer, brand='Lexus', model='RX')
+        url = reverse('cars:seller_profile', args=[self.dealer.pk])
+        resp = self.client.get(url)
+        self.assertContains(resp, 'Test Motors')
+        self.assertContains(resp, 'Lexus')
+        resp = self.client.get(url, {'brand': 'Lexus'})
+        self.assertEqual([c.brand for c in resp.context['listings_page']], ['Lexus'])
 
 
 @override_settings(PAYSTACK_SECRET_KEY='sk_test_secret')
 class PaystackWebhookTests(BaseTestCase):
     def setUp(self):
         super().setUp()
-        self.order = services.create_order(self.buyer, [self.car], {k: v for k, v in CHECKOUT_DATA.items() if k != 'agree'}, 'paystack')
+        self.order = services.create_order(self.buyer, [self.car], ORDER_CONTACT, 'paystack')
         self.order.payment_reference = 'REF-1'
         self.order.save()
 

@@ -1,11 +1,22 @@
 {% load static %}<!doctype html>
-<html lang="en">
+<html lang="en" class="no-js">
 <head>
   <meta charset="utf-8">
+  <script>
+    /* Set theme + js class before first paint (no flash of the wrong theme). */
+    (function () {
+      var d = document.documentElement, t = null;
+      try { t = localStorage.getItem('carhub-theme'); } catch (e) {}
+      if (!t) t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      d.setAttribute('data-theme', t);
+      d.classList.replace('no-js', 'js');
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ SITE_NAME }} — {{ SITE_DESCRIPTION }}{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}Buy and sell verified cars across Nigeria. Browse foreign-used and brand-new cars from trusted dealers, reserve online with a refundable deposit.{% endblock %}">
   <meta name="theme-color" content="#0f1419">
+  <meta name="color-scheme" content="light dark">
   <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

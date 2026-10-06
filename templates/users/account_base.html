@@ -11,6 +11,7 @@
     <a href="{% url 'users:notifications' %}" class="{% if '/account/notifications' in path %}is-active{% endif %}">{% icon 'bell' 18 %} Notifications{% if notifications_unread_count %}<span class="pill badge badge-brand">{{ notifications_unread_count }}</span>{% endif %}</a>
     <div class="nav-label">Selling</div>
     <a href="{% url 'cars:my_listings' %}" class="{% if '/cars/my-listings' in path %}is-active{% endif %}">{% icon 'car' 18 %} My listings</a>
+    <a href="{% url 'cars:sales' %}" class="{% if '/cars/reservations' in path %}is-active{% endif %}">{% icon 'calendar' 18 %} Reservations{% if active_reservations_count %}<span class="pill badge badge-brand">{{ active_reservations_count }}</span>{% endif %}</a>
     <a href="{% url 'cars:listing_create' %}" class="{% if path == '/cars/sell/new/' %}is-active{% endif %}">{% icon 'plus' 18 %} New listing</a>
     {% if not user.profile.is_car_seller_approved %}<a href="{% url 'users:apply_seller' %}" class="{% if '/account/verify' in path %}is-active{% endif %}">{% icon 'verified' 18 %} Get verified</a>{% endif %}
     {% if user.is_staff %}

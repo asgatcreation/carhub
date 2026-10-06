@@ -1,0 +1,7 @@
+{% extends 'emails/base.html' %}
+{% block title %}Password reset request{% endblock %}
+{% block preheader %}Someone tried to reset a CarHub password using this email address.{% endblock %}
+{% block heading %}No account for this email{% endblock %}
+{% block intro %}Someone (hopefully you) asked to reset the password for <strong>{{ email }}</strong> on CarHub, but there is no account with this address.{% endblock %}
+{% block main %}<tr><td class="pad" style="padding:24px 44px 8px"><a href="{{ site_url }}/accounts/signup/" style="display:inline-block;background:#0f1419;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:14px 26px;border-radius:12px">Create a free account</a></td></tr>{% endblock %}
+{% block note %}Maybe you signed up with a different email, or with Google. If you didn't request this, ignore this email.{% endblock %}

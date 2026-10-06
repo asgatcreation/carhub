@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+from datetime import date
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -8,10 +9,9 @@ from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Avg, Count, F, Q
+from django.db.models import Avg, Count, F, Max, Min, Q
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -20,14 +20,18 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
+from core.emails import send_branded
 from users.models import Conversation, Message, Notification, Review
 
 from . import payments, services
-from .forms import CheckoutForm, ListingForm, ReviewForm, SearchForm
+from .forms import (
+    CancelReservationForm, CheckoutDetailsForm, ListingForm, PaymentForm, ReviewForm, ScheduleInspectionForm,
+    SearchForm,
+)
 from core.formatting import naira_compact
 
 from .models import (
-    BODY_TYPE_CHOICES, CONDITION_CHOICES, ENGINE_CHOICES, STATE_CHOICES, TRANSMISSION_CHOICES, Car, CarImage, Order,
+    BODY_TYPE_CHOICES, CONDITION_CHOICES, ENGINE_CHOICES, STATE_CHOICES, TRANSMISSION_CHOICES, Car, CarImage, Order, OrderItem,
 )
 
 logger = logging.getLogger('carhub')
@@ -100,6 +104,7 @@ def browse(request):
     qs = qs.order_by(SORTS.get(sort, '-created_at'), '-id')
 
     page = Paginator(qs, settings.ITEMS_PER_PAGE).get_page(request.GET.get('page'))
+    page.object_list = services.annotate_insights(list(page.object_list))
     public = Car.objects.public()
 
     return render(request, 'cars/browse.html', {
@@ -206,10 +211,12 @@ def car_detail(request, slug):
     if seller_profile:
         rating = seller_profile.reviews.aggregate(avg=Avg('rating'), n=Count('id'))
 
-    similar = (Car.objects.public().exclude(pk=car.pk)
-               .filter(Q(body_type=car.body_type) | Q(brand=car.brand))
-               .filter(price__gte=car.price * 6 / 10, price__lte=car.price * 15 / 10)
-               .prefetch_related('images')[:4])
+    similar = list(Car.objects.public().exclude(pk=car.pk)
+                   .filter(Q(body_type=car.body_type) | Q(brand=car.brand))
+                   .filter(price__gte=car.price * 6 / 10, price__lte=car.price * 15 / 10)
+                   .select_related('created_by__profile').prefetch_related('images')[:4])
+    recent = services.recently_viewed(request, exclude=car)
+    services.annotate_insights([car, *similar, *recent])
 
     features_by_group = {}
     for feature in car.features.all():
@@ -225,7 +232,7 @@ def car_detail(request, slug):
         'rating': rating,
         'features_by_group': features_by_group,
         'similar': similar,
-        'recent': services.recently_viewed(request, exclude=car),
+        'recent': recent,
         'in_cart': car.pk in services.cart_car_ids(request),
         'saved': car.pk in services.wishlist_car_ids(request),
         'deposit': services.deposit_for(car),
@@ -270,6 +277,10 @@ def cart_view(request):
     })
 
 
+def _login_redirect(next_url):
+    return f"{reverse('account_login')}?{urlencode({'next': next_url})}"
+
+
 @require_POST
 def cart_add(request, car_id):
     car = get_object_or_404(Car.objects.public(), pk=car_id)
@@ -285,11 +296,23 @@ def cart_add(request, car_id):
             return JsonResponse({'ok': False, 'error': msg}, status=400)
         messages.error(request, msg)
         return _back(request)
+
     services.add_to_cart(request, car)
+    buy_now = bool(request.POST.get('buy_now'))
+
+    if not request.user.is_authenticated:
+        # Reserving needs an account: keep the car in the guest cart (merged at sign-in) and come back to it.
+        next_url = reverse('cars:checkout') if buy_now else car.get_absolute_url()
+        if _is_ajax(request):
+            return JsonResponse({'ok': False, 'auth_required': True, 'login_url': _login_redirect(next_url),
+                                 'error': 'Sign in to reserve this car.'}, status=401)
+        messages.info(request, f'Sign in to reserve the {car.title}. We saved it to your cart.')
+        return redirect(_login_redirect(next_url))
+
     count = len(services.cart_car_ids(request))
     if _is_ajax(request):
         return JsonResponse({'ok': True, 'cart_count': count, 'message': f'{car.title} added to your cart'})
-    if request.POST.get('buy_now'):
+    if buy_now:
         return redirect('cars:checkout')
     messages.success(request, f'{car.title} added to your cart.')
     return _back(request)
@@ -315,68 +338,102 @@ def wishlist_toggle(request, car_id):
 
 def wishlist_view(request):
     ids = services.wishlist_car_ids(request)
-    cars = Car.objects.filter(pk__in=ids, approval_status='approved').prefetch_related('images')
-    return render(request, 'cars/saved.html', {'cars': cars, 'saved_ids': set(ids)})
+    cars = (Car.objects.filter(pk__in=ids, approval_status='approved')
+            .select_related('created_by__profile').prefetch_related('images'))
+    return render(request, 'cars/saved.html', {'cars': services.annotate_insights(list(cars)), 'saved_ids': set(ids)})
 
 
 # ======================
-# CHECKOUT & ORDERS
+# CHECKOUT (cart -> details -> review & pay -> confirmation)
 # ======================
+
+CHECKOUT_SESSION_KEY = 'checkout_details'
+
+
+def _checkout_cars(request):
+    cars = services.cart_cars(request)
+    return [c for c in cars if c.is_available], [c for c in cars if not c.is_available]
+
 
 @login_required
 def checkout(request):
-    cars = services.cart_cars(request)
-    unavailable = [c for c in cars if not c.is_available]
-    cars = [c for c in cars if c.is_available]
+    """Step 2: contact details (email is the account email) and inspection preferences."""
+    cars, unavailable = _checkout_cars(request)
     if not cars:
-        messages.info(request, 'Your cart is empty — add a car to reserve it.')
+        messages.info(request, 'Your cart is empty. Add a car to reserve it.')
         return redirect('cars:cart')
 
     user = request.user
-    initial = {'full_name': user.get_full_name(), 'email': user.email, 'phone': getattr(user.profile, 'phone', '')}
-    form = CheckoutForm(request.POST or None, initial=initial)
-    can_pay = payments.is_configured() or settings.DEMO_CHECKOUT
-
+    saved = request.session.get(CHECKOUT_SESSION_KEY) or {}
+    initial = {'full_name': user.get_full_name(), 'phone': user.profile.phone, 'inspection_state': cars[0].state,
+               'preferred_time': 'morning', **saved}
+    form = CheckoutDetailsForm(request.POST or None, initial=initial)
     if request.method == 'POST' and form.is_valid():
-        if not can_pay:
-            messages.error(request, 'Online payments are not available right now.')
-            return redirect('cars:cart')
-        contact = {k: form.cleaned_data[k] for k in ('full_name', 'email', 'phone', 'inspection_state', 'notes')}
+        data = dict(form.cleaned_data)
+        data['preferred_date'] = data['preferred_date'].isoformat()
+        request.session[CHECKOUT_SESSION_KEY] = data
+        if not user.profile.phone:
+            user.profile.phone = data['phone']
+            user.profile.save(update_fields=['phone'])
+        return redirect('cars:checkout_review')
+
+    return render(request, 'cars/checkout.html', {
+        'form': form, 'cars': cars, 'unavailable': unavailable, 'summary': services.cart_summary(cars), 'step': 2,
+    })
+
+
+def _payment_methods():
+    methods = []
+    if payments.is_configured():
+        methods.append('paystack')
+    if settings.DEMO_CHECKOUT:
+        methods.append('demo')
+    return methods
+
+
+@login_required
+def checkout_review(request):
+    """Step 3: review everything, choose a payment method and pay the deposit."""
+    cars, unavailable = _checkout_cars(request)
+    details = request.session.get(CHECKOUT_SESSION_KEY)
+    if not cars:
+        return redirect('cars:cart')
+    if not details:
+        return redirect('cars:checkout')
+
+    methods = _payment_methods()
+    form = PaymentForm(request.POST or None, methods=methods)
+    if request.method == 'POST' and form.is_valid():
+        method = form.cleaned_data['method']
+        contact = {k: details.get(k, '') for k in ('full_name', 'phone', 'inspection_state', 'preferred_time', 'notes')}
+        contact.update(email=request.user.email, preferred_date=date.fromisoformat(details['preferred_date']))
         with transaction.atomic():
             # Lock the rows so two buyers can't reserve the same car at once.
             locked = list(Car.objects.select_for_update().filter(pk__in=[c.pk for c in cars], status='available'))
             if len(locked) != len(cars):
                 messages.error(request, 'One of the cars was just reserved by someone else. Please review your cart.')
                 return redirect('cars:cart')
-            order = services.create_order(user, cars, contact, provider='paystack' if payments.is_configured() else 'demo')
+            order = services.create_order(request.user, cars, contact, provider=method)
 
-        if order.provider == 'paystack':
+        if method == 'paystack':
             try:
-                url = payments.initialize(order, request.build_absolute_uri(reverse('cars:paystack_callback')))
-                return redirect(url)
+                return redirect(payments.initialize(order, request.build_absolute_uri(reverse('cars:paystack_callback'))))
             except payments.PaymentError as exc:
-                if not settings.DEMO_CHECKOUT:
-                    order.status = 'failed'
-                    order.save(update_fields=['status'])
-                    messages.error(request, str(exc))
-                    return redirect('cars:checkout')
-                order.provider = 'demo'
-                order.save(update_fields=['provider'])
+                order.status = 'failed'
+                order.save(update_fields=['status'])
+                messages.error(request, str(exc))
+                return redirect('cars:checkout_review')
 
-        # Demo checkout (no payment provider): record the reservation, clearly labelled as a demo.
         order.mark_paid(reference=f'DEMO-{order.number}')
         services.clear_cart(request)
-        messages.success(request, 'Reservation confirmed (demo payment).')
-        return redirect(order)
+        request.session.pop(CHECKOUT_SESSION_KEY, None)
+        return redirect(f'{order.get_absolute_url()}?confirmed=1')
 
-    return render(request, 'cars/checkout.html', {
-        'form': form,
-        'cars': cars,
-        'unavailable': unavailable,
-        'summary': services.cart_summary(cars),
-        'paystack': payments.is_configured(),
-        'demo': settings.DEMO_CHECKOUT and not payments.is_configured(),
-        'can_pay': can_pay,
+    return render(request, 'cars/checkout_review.html', {
+        'form': form, 'cars': cars, 'unavailable': unavailable, 'summary': services.cart_summary(cars),
+        'details': {**details, 'preferred_date': date.fromisoformat(details['preferred_date'])},
+        'time_label': dict(Order.TIME_SLOTS).get(details.get('preferred_time'), ''),
+        'methods': methods, 'step': 3,
     })
 
 
@@ -388,8 +445,9 @@ def paystack_callback(request):
     if tx and int(tx.get('amount', 0)) == int(order.deposit_total * 100):
         order.mark_paid(reference)
         services.clear_cart(request)
-        messages.success(request, 'Payment received — your car is reserved.')
-    elif order.status != 'paid':
+        request.session.pop(CHECKOUT_SESSION_KEY, None)
+        return redirect(f'{order.get_absolute_url()}?confirmed=1')
+    if order.status != 'paid':
         messages.error(request, "We couldn't confirm your payment yet. If you were charged, it will update shortly.")
     return redirect(order)
 
@@ -411,17 +469,85 @@ def paystack_webhook(request):
     return HttpResponse(status=200)
 
 
+# ======================
+# ORDERS (buyer) & RESERVATIONS (seller)
+# ======================
+
 @login_required
 def orders(request):
     return render(request, 'cars/orders.html', {
-        'orders': request.user.orders.prefetch_related('items').all(),
+        'orders': request.user.orders.exclude(status='failed').prefetch_related('items').all(),
     })
 
 
 @login_required
 def order_detail(request, number):
-    order = get_object_or_404(Order.objects.prefetch_related('items__car'), number=number, user=request.user)
-    return render(request, 'cars/order_detail.html', {'order': order})
+    order = get_object_or_404(Order.objects.prefetch_related('items__car', 'items__seller__profile'),
+                              number=number, user=request.user)
+    return render(request, 'cars/order_detail.html', {
+        'order': order, 'confirmed': request.GET.get('confirmed') == '1', 'cancel_form': CancelReservationForm(),
+    })
+
+
+@login_required
+@require_POST
+def order_item_cancel(request, item_id):
+    item = get_object_or_404(OrderItem.objects.select_related('order', 'car', 'seller'), pk=item_id, order__user=request.user)
+    form = CancelReservationForm(request.POST)
+    if item.is_active and form.is_valid():
+        services.cancel_reservation(item, request.user, 'buyer', form.cleaned_data['reason'])
+        if item.refund_status == 'refunded':
+            messages.success(request, 'Reservation cancelled and your deposit refunded.')
+        else:
+            messages.success(request, 'Reservation cancelled. Your deposit refund is being processed.')
+    else:
+        messages.error(request, 'This reservation can no longer be cancelled.')
+    return redirect(item.order)
+
+
+@login_required
+def sales(request):
+    mine = OrderItem.objects.filter(seller=request.user).exclude(status='awaiting_payment')
+    status = request.GET.get('status', 'active')
+    items = mine.select_related('order__user__profile', 'car')
+    if status == 'active':
+        items = items.filter(status__in=['reserved', 'scheduled'])
+    elif status in ('completed', 'cancelled'):
+        items = items.filter(status=status)
+    counts = dict(mine.values_list('status').annotate(n=Count('id')))
+    return render(request, 'cars/sales.html', {
+        'items': items, 'status': status,
+        'counts': {'active': counts.get('reserved', 0) + counts.get('scheduled', 0),
+                   'completed': counts.get('completed', 0), 'cancelled': counts.get('cancelled', 0)},
+    })
+
+
+@login_required
+@require_POST
+def sale_action(request, item_id):
+    item = get_object_or_404(OrderItem.objects.select_related('order__user', 'car'), pk=item_id, seller=request.user)
+    action = request.POST.get('action')
+    if action == 'schedule' and item.status in ('reserved', 'scheduled'):
+        form = ScheduleInspectionForm(request.POST)
+        if form.is_valid():
+            services.schedule_inspection(item, form.cleaned_data['inspection_at'], form.cleaned_data['inspection_address'],
+                                         form.cleaned_data['seller_note'], request.user)
+            messages.success(request, 'Inspection scheduled. The buyer has been notified.')
+        else:
+            messages.error(request, 'Enter a valid inspection date, time and address.')
+    elif action == 'complete' and item.status == 'scheduled':
+        services.complete_sale(item, request.user)
+        messages.success(request, f'Sale of {item.title} completed. Congratulations!')
+    elif action == 'cancel' and item.is_active:
+        form = CancelReservationForm(request.POST)
+        if form.is_valid():
+            services.cancel_reservation(item, request.user, 'seller', form.cleaned_data['reason'])
+            messages.success(request, 'Reservation cancelled and the buyer refunded.')
+        else:
+            messages.error(request, 'Tell the buyer why you are cancelling.')
+    else:
+        messages.error(request, "That action isn't available for this reservation.")
+    return redirect('cars:sales')
 
 
 # ======================
@@ -522,11 +648,30 @@ def _brand_options():
 @staff_member_required
 def moderation(request):
     status = request.GET.get('status', 'pending')
-    qs = Car.objects.filter(approval_status=status).select_related('created_by').prefetch_related('images')
+    qs = (Car.objects.filter(approval_status=status)
+          .select_related('created_by__profile').prefetch_related('images', 'features')
+          .order_by('created_at' if status == 'pending' else '-approved_at'))
+    page = Paginator(qs, 10).get_page(request.GET.get('page'))
+    cars = services.annotate_insights(list(page.object_list))
+    listing_counts = dict(Car.objects.filter(created_by__in={c.created_by_id for c in cars})
+                          .values_list('created_by').annotate(n=Count('id')))
+    for car in cars:
+        photos = len(car.images.all())
+        car.review_checks = [
+            (photos >= 3, f'{photos} photo{"s" if photos != 1 else ""}'),
+            (bool(car.vin), 'VIN provided' if car.vin else 'No VIN'),
+            (len(car.description) >= 80, 'Detailed description' if len(car.description) >= 80 else 'Short description'),
+            (not car.insight or car.insight['level'] != 'great' or car.insight['pct'] > -30,
+             'Price looks realistic' if not car.insight or car.insight['pct'] > -30 else 'Suspiciously cheap'),
+        ]
+        car.seller_listings = listing_counts.get(car.created_by_id, 0)
+    page.object_list = cars
     return render(request, 'cars/moderation.html', {
-        'page_obj': Paginator(qs.order_by('created_at'), 20).get_page(request.GET.get('page')),
+        'page_obj': page,
         'status': status,
         'counts': dict(Car.objects.values_list('approval_status').annotate(n=Count('id'))),
+        'reasons': ['Photos are not of the actual car', 'Price looks unrealistic', 'Add more photos (front, back, interior)',
+                    'Description is too short', 'Duplicate listing'],
     })
 
 
@@ -546,7 +691,9 @@ def moderate(request, car_id):
         text = f'Your listing "{car.full_title}" was {verb}.' + (f' Note: {reason}' if reason else '')
         Notification.objects.create(user=uploader, actor=request.user, verb=verb, message=text,
                                     link=car.get_absolute_url() if decision == 'approve' else reverse('cars:my_listings'))
-        send_mail(f'Your CarHub listing was {verb}', text, None, [uploader.email], fail_silently=True)
+        send_branded(uploader.email, f'Your CarHub listing was {verb}', heading=f'Your listing was {verb}', body=text,
+                     cta_url=car.get_absolute_url() if decision == 'approve' else reverse('cars:my_listings'),
+                     cta_label='View listing' if decision == 'approve' else 'Edit listing')
 
     if _is_ajax(request):
         return JsonResponse({'ok': True, 'status': car.approval_status})
@@ -573,7 +720,14 @@ def seller_profile(request, seller_id):
             messages.success(request, 'Thanks — your review has been published.')
             return redirect(f'{request.path}#reviews')
 
-    listings = Car.objects.public().filter(created_by=seller).prefetch_related('images')
+    inventory = Car.objects.public().filter(created_by=seller)
+    brand = request.GET.get('brand', '')
+    sort = request.GET.get('sort', 'newest')
+    listings = inventory.filter(brand=brand) if brand else inventory
+    listings = listings.order_by({'price_asc': 'price', 'price_desc': '-price', 'year': '-year'}.get(sort, '-created_at'))
+    listings = listings.prefetch_related('images')
+    listings_page = Paginator(listings, 9).get_page(request.GET.get('page'))
+    listings_page.object_list = services.annotate_insights(list(listings_page.object_list))
     reviews = profile.reviews.select_related('reviewer').order_by('-created_at')
     agg = reviews.aggregate(
         overall=Avg('rating'), communication=Avg('communication'), professionalism=Avg('professionalism'),
@@ -586,9 +740,15 @@ def seller_profile(request, seller_id):
     return render(request, 'cars/seller.html', {
         'seller': seller,
         'profile': profile,
-        'listings_page': Paginator(listings, 9).get_page(request.GET.get('page')),
-        'listing_count': listings.count(),
+        'listings_page': listings_page,
+        'listing_count': inventory.count(),
         'sold_count': Car.objects.filter(created_by=seller, status='sold').count(),
+        'recently_sold': Car.objects.filter(created_by=seller, status='sold').prefetch_related('images').order_by('-updated_at')[:4],
+        'inventory_brands': inventory.values('brand').annotate(n=Count('id')).order_by('-n', 'brand'),
+        'price_range': inventory.aggregate(low=Min('price'), high=Max('price')),
+        'brand': brand,
+        'sort': sort,
+        'certifications': [c.strip() for c in profile.certifications.replace('\n', ',').split(',') if c.strip()],
         'reviews_page': Paginator(reviews, 5).get_page(request.GET.get('rpage')),
         'agg': agg,
         'breakdown': breakdown,

@@ -3,7 +3,9 @@ from datetime import date
 from django import forms
 from django.conf import settings
 
-from .models import BODY_TYPE_CHOICES, CONDITION_CHOICES, ENGINE_CHOICES, STATE_CHOICES, TRANSMISSION_CHOICES, Car, Feature
+from .models import (
+    BODY_TYPE_CHOICES, CONDITION_CHOICES, ENGINE_CHOICES, STATE_CHOICES, TRANSMISSION_CHOICES, Car, Feature, Order,
+)
 
 SORT_CHOICES = [
     ('newest', 'Newest listings'),
@@ -102,20 +104,56 @@ class ListingForm(forms.ModelForm):
         return photos
 
 
-class CheckoutForm(forms.Form):
-    full_name = forms.CharField(max_length=150)
-    email = forms.EmailField()
+class CheckoutDetailsForm(forms.Form):
+    """Step 2 of checkout: contact + inspection preferences. Email is the account email and isn't editable."""
+    full_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'autocomplete': 'name'}))
     phone = forms.CharField(max_length=30, widget=forms.TextInput(attrs={'placeholder': '+234 803 000 0000', 'autocomplete': 'tel'}))
     inspection_state = forms.ChoiceField(choices=_blank(STATE_CHOICES, 'Select a state'), label='Where will you inspect the car?')
-    notes = forms.CharField(required=False, widget=forms.Textarea(attrs={'rows': 3, 'placeholder': 'Preferred inspection date, questions for the seller…'}))
-    agree = forms.BooleanField(label='I understand the deposit is refundable if the car fails inspection.')
+    preferred_date = forms.DateField(label='Preferred inspection date', widget=forms.DateInput(attrs={'type': 'date'}))
+    preferred_time = forms.ChoiceField(choices=Order.TIME_SLOTS, label='Preferred time', widget=forms.RadioSelect)
+    notes = forms.CharField(required=False, label='Note for the seller',
+                            widget=forms.Textarea(attrs={'rows': 3, 'placeholder': 'e.g. I will come with my mechanic'}))
 
     def clean_phone(self):
         phone = self.cleaned_data['phone']
-        digits = ''.join(ch for ch in phone if ch.isdigit())
-        if len(digits) < 10:
+        if len(''.join(ch for ch in phone if ch.isdigit())) < 10:
             raise forms.ValidationError('Enter a valid phone number.')
         return phone
+
+    def clean_preferred_date(self):
+        day = self.cleaned_data['preferred_date']
+        today = date.today()
+        if day <= today:
+            raise forms.ValidationError('Choose a date from tomorrow onwards.')
+        if (day - today).days > 30:
+            raise forms.ValidationError('Reservations hold a car for up to 30 days — pick an earlier date.')
+        return day
+
+
+class PaymentForm(forms.Form):
+    """Step 3 of checkout: confirm and choose how to pay the deposit."""
+    method = forms.ChoiceField(choices=[('paystack', 'Card, bank transfer or USSD (Paystack)'), ('demo', 'Demo payment')],
+                               widget=forms.RadioSelect)
+    agree = forms.BooleanField(label='I understand the deposit is refundable if the car fails inspection or I cancel before it.')
+
+    def __init__(self, *args, methods=('paystack', 'demo'), **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['method'].choices = [c for c in self.fields['method'].choices if c[0] in methods]
+        if len(self.fields['method'].choices) == 1:
+            self.fields['method'].initial = self.fields['method'].choices[0][0]
+
+
+class ScheduleInspectionForm(forms.Form):
+    inspection_at = forms.DateTimeField(label='Inspection date & time',
+                                        widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+                                        input_formats=['%Y-%m-%dT%H:%M'])
+    inspection_address = forms.CharField(max_length=255, label='Where')
+    seller_note = forms.CharField(required=False, label='Note for the buyer', widget=forms.Textarea(attrs={'rows': 2}))
+
+
+class CancelReservationForm(forms.Form):
+    reason = forms.CharField(max_length=500, widget=forms.Textarea(attrs={'rows': 2}),
+                             label='Why are you cancelling?')
 
 
 class ReviewForm(forms.Form):

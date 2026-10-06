@@ -1,0 +1,6 @@
+{# Progress for multi-step auth flows. steps: comma-separated labels; current: 1-based index. #}
+<ol class="flow-steps" aria-label="Progress">
+  {% for label in steps|split:',' %}
+    <li class="{% if forloop.counter < current %}done{% elif forloop.counter == current %}current{% endif %}"{% if forloop.counter == current %} aria-current="step"{% endif %}><span>{% if forloop.counter < current %}{% icon 'check' 12 %}{% else %}{{ forloop.counter }}{% endif %}</span>{{ label }}</li>
+  {% endfor %}
+</ol>

@@ -43,6 +43,9 @@ if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
     CSRF_TRUSTED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')
 
+# Absolute base URL for links inside emails (which are rendered outside a request).
+SITE_URL = (os.environ.get('SITE_URL') or (f'https://{RENDER_EXTERNAL_HOSTNAME}' if RENDER_EXTERNAL_HOSTNAME else 'http://localhost:8000')).rstrip('/')
+
 # ======================
 # APPLICATIONS
 # ======================
@@ -200,16 +203,31 @@ AUTHENTICATION_BACKENDS = [
 ACCOUNT_LOGIN_METHODS = {'email'}
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'
-ACCOUNT_EMAIL_VERIFICATION = os.environ.get('ACCOUNT_EMAIL_VERIFICATION', 'optional')
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_SESSION_REMEMBER = True
 ACCOUNT_LOGOUT_ON_GET = False
 ACCOUNT_SIGNUP_FORM_CLASS = 'users.signup_form.CustomSignupForm'
 ACCOUNT_USER_DISPLAY = lambda user: user.get_full_name() or user.email
+ACCOUNT_EMAIL_SUBJECT_PREFIX = ''
+ACCOUNT_ADAPTER = 'users.adapter.AccountAdapter'
+ACCOUNT_EMAIL_NOTIFICATIONS = True                    # 'your password was changed' security emails
+
+# One-time codes instead of links: a 6-character code is emailed to verify a new
+# account, and another to reset a forgotten password. The code is only in the body.
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_TIMEOUT = 15 * 60
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_MAX_ATTEMPTS = 5
+ACCOUNT_PASSWORD_RESET_BY_CODE_ENABLED = True
+ACCOUNT_PASSWORD_RESET_BY_CODE_TIMEOUT = 10 * 60
+ACCOUNT_PASSWORD_RESET_BY_CODE_MAX_ATTEMPTS = 5
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+ACCOUNT_LOGIN_ON_PASSWORD_RESET = True
+ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = '/'
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http' if DEBUG else 'https'
 
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+ACCOUNT_LOGOUT_REDIRECT_URL = '/'
 
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
@@ -221,18 +239,43 @@ SOCIALACCOUNT_PROVIDERS = {
     },
 }
 SOCIAL_LOGIN_ENABLED = bool(GOOGLE_CLIENT_ID)
+SOCIALACCOUNT_AUTO_SIGNUP = True                      # Google gives us name + verified email: no extra form
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True             # "Continue with Google" also signs in existing email accounts
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
+SOCIALACCOUNT_LOGIN_ON_GET = False                    # the button POSTs (CSRF-safe) straight to Google
 
 # ======================
 # EMAIL
 # ======================
 
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
-EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '').replace(' ', '')  # Gmail app passwords are shown with spaces
 EMAIL_USE_TLS = env_bool('EMAIL_USE_TLS', True)
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'CarHub <noreply@carhub.local>')
+EMAIL_TIMEOUT = 15
+BREVO_API_KEY = os.environ.get('BREVO_API_KEY', '')
+
+# Pick the first transport that is configured: Brevo's HTTP API (works on hosts that
+# block outbound SMTP), then SMTP (e.g. Gmail with an app password), else print to console.
+if os.environ.get('EMAIL_BACKEND'):
+    EMAIL_BACKEND = os.environ['EMAIL_BACKEND']
+elif BREVO_API_KEY:
+    EMAIL_BACKEND = 'core.email_backends.BrevoEmailBackend'
+elif EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_ENABLED = EMAIL_BACKEND != 'django.core.mail.backends.console.EmailBackend'
+
+# Require the emailed code before a new account can sign in, but only when mail can
+# actually be delivered; otherwise a fresh deploy without SMTP would lock everyone out.
+ACCOUNT_EMAIL_VERIFICATION = os.environ.get('ACCOUNT_EMAIL_VERIFICATION', 'mandatory' if EMAIL_ENABLED else 'optional')
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = ACCOUNT_EMAIL_VERIFICATION == 'mandatory'
+
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL') or (f'CarHub <{EMAIL_HOST_USER}>' if EMAIL_HOST_USER else 'CarHub <noreply@carhub.local>')
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # ======================
 # SESSIONS

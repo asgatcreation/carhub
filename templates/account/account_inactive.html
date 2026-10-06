@@ -1,0 +1,8 @@
+{% extends 'account/_auth_layout.html' %}
+{% block title %}Account inactive | CarHub{% endblock %}
+{% block auth %}
+<div class="auth-icon danger">{% icon 'lock' 26 %}</div>
+<h1>This account is inactive</h1>
+<p class="muted">It has been deactivated. If you think this is a mistake, contact us and we'll look into it.</p>
+<a class="btn btn-dark btn-lg btn-block" href="{% url 'contact' %}">Contact support</a>
+{% endblock %}

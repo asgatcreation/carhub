@@ -1,0 +1,6 @@
+{% autoescape off %}{% block content %}{% endblock content %}
+
+--
+CarHub · Nigeria's marketplace for verified cars
+{{ site_url }}
+Never share your codes or password, not even with CarHub staff.{% endautoescape %}

@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}Checkout: review & pay | CarHub{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div class="container">
+    {% include 'partials/stepper.html' with step=3 %}
+    <h1>Review &amp; pay</h1>
+    <p class="muted mb-0">Check everything, then pay your refundable deposit to reserve.</p>
+  </div>
+</div>
+
+<div class="container checkout-layout">
+  <form method="post" class="card" novalidate>
+    {% csrf_token %}
+    <div class="review-block">
+      <div>
+        <h3>{% icon 'user' 18 %} Contact</h3>
+        <dl><dt>Name</dt><dd>{{ details.full_name }}</dd><dt>Phone</dt><dd>{{ details.phone }}</dd><dt>Email</dt><dd>{{ user.email }}</dd></dl>
+      </div>
+      <a class="btn btn-sm" href="{% url 'cars:checkout' %}">{% icon 'edit' 16 %} Edit</a>
+    </div>
+    <div class="review-block">
+      <div>
+        <h3>{% icon 'calendar' 18 %} Inspection</h3>
+        <dl><dt>Where</dt><dd>{{ details.inspection_state }}</dd><dt>When</dt><dd>{{ details.preferred_date|date:'l, j F Y' }} · {{ time_label }}</dd>
+          {% if details.notes %}<dt>Note</dt><dd style="font-weight:500">{{ details.notes }}</dd>{% endif %}</dl>
+      </div>
+      <a class="btn btn-sm" href="{% url 'cars:checkout' %}">{% icon 'edit' 16 %} Edit</a>
+    </div>
+    <div class="review-block" style="display:block">
+      <h3>{% icon 'card' 18 %} Payment method</h3>
+      {% if methods %}
+        <div class="option-cards" style="grid-template-columns:1fr">
+          {% for radio in form.method %}
+            <label class="option-card">{{ radio.tag }}
+              <span>{% if radio.data.value == 'paystack' %}Card, bank transfer or USSD<small>Secure checkout by Paystack. You'll return here once paid.</small>
+                    {% else %}Demo payment<small>Portfolio demo: records the reservation without charging any money.</small>{% endif %}</span>
+            </label>
+          {% endfor %}
+        </div>
+        {% for e in form.method.errors %}<p class="error">{{ e }}</p>{% endfor %}
+      {% else %}
+        <div class="notice danger">{% icon 'alert' 20 %}<div>Online payments are temporarily unavailable. Please try again later.</div></div>
+      {% endif %}
+    </div>
+    <div class="review-block" style="display:block">
+      <label class="check {% if form.agree.errors %}has-error{% endif %}">{{ form.agree }} <span>{{ form.agree.label }}</span></label>
+      {% if form.agree.errors %}<p class="error mt-1">Please confirm to continue.</p>{% endif %}
+      <button type="submit" class="btn btn-primary btn-lg btn-block mt-2" {% if not methods %}disabled{% endif %}>
+        {% icon 'lock' 20 %} Pay {{ summary.deposit_total|naira }} &amp; reserve
+      </button>
+      <div class="secure-note">{% icon 'shield' 16 %} Your deposit is held until the inspection is complete</div>
+    </div>
+  </form>
+
+  <aside class="card summary">{% include 'partials/order_summary.html' %}</aside>
+</div>
+{% endblock %}

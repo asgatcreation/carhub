@@ -1,0 +1,15 @@
+{# Exact money breakdown shared by cart, checkout and review. Usage: {% include 'partials/order_summary.html' with cars=cars summary=summary %} #}
+<h3 style="font-size:1.05rem">Order summary</h3>
+{% for car in cars %}
+  <div class="row" style="align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)">
+    <img src="{{ car.thumbnail }}" alt="" style="width:64px;height:48px;border-radius:8px;object-fit:cover;flex:none" referrerpolicy="no-referrer">
+    <div class="grow small" style="min-width:0"><strong style="color:var(--ink)">{{ car.full_title }}</strong><div class="muted xs">{{ car.location }}, {{ car.state }}</div></div>
+    <span class="small num" style="font-weight:750;color:var(--ink);white-space:nowrap">{{ car.price|naira }}</span>
+  </div>
+{% endfor %}
+<div class="summary-row mt-1"><span class="muted">Subtotal ({{ summary.count }} car{{ summary.count|pluralize }})</span><span class="num">{{ summary.vehicles_total|naira }}</span></div>
+<div class="summary-row"><span class="muted">Refundable deposit{% if summary.count > 1 %} ({{ summary.count }} &times; {{ summary.deposit_each|naira }}){% endif %}</span><span class="num">{{ summary.deposit_total|naira }}</span></div>
+<div class="summary-row"><span class="muted">Balance at inspection</span><span class="num">{{ summary.balance_total|naira }}</span></div>
+<div class="summary-row total"><span>Total price</span><span class="num">{{ summary.vehicles_total|naira }}</span></div>
+<div class="pay-today"><span class="small" style="font-weight:700">Pay today</span><strong class="num">{{ summary.deposit_total|naira }}</strong></div>
+<p class="xs subtle mt-1 mb-0">Total price = deposit today + balance paid to the seller after you inspect the car. No hidden fees.</p>

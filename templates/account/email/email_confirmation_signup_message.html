@@ -1,0 +1,7 @@
+{% extends 'emails/base.html' %}
+{% block title %}Verify your email{% endblock %}
+{% block preheader %}Welcome to CarHub! Open this email for the code that activates your account.{% endblock %}
+{% block heading %}Verify your email{% endblock %}
+{% block intro %}{% if user.first_name %}Hi {{ user.first_name }}, {% else %}Hi there, {% endif %}welcome to CarHub. Enter the code below in the window where you signed up to activate your account.{% endblock %}
+{% block main %}{% include 'emails/_code.html' with expires_minutes=15 code_label='Your verification code' %}{% endblock %}
+{% block note %}Once verified you can reserve cars with a refundable deposit, message sellers and list your own car.<br><br>Didn't sign up? You can safely ignore this email; the account stays inactive without this code.{% endblock %}

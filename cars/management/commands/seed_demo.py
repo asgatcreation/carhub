@@ -16,10 +16,14 @@ from django.contrib.auth.models import Permission
 from django.contrib.sites.models import Site
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.test.utils import override_settings
 from django.utils import timezone
 
 from cars.models import Car, CarImage, Cart, CartItem, Feature, WishlistItem
 from cars.seed.catalog import COLORS, FEATURES, LOCATIONS, MODELS
+from allauth.account.models import EmailAddress
+
+from cars import services
 from cars.services import create_order
 from users.models import Application, Conversation, Message, Notification, Review
 
@@ -92,12 +96,14 @@ class Command(BaseCommand):
             raise CommandError('cars/seed/photos.json is missing — run `python manage.py fetch_car_photos` first.')
         self.photos = json.loads(PHOTOS.read_text(encoding='utf-8'))
 
-        with transaction.atomic():
+        # Seeding triggers reservation notifications; don't send real email for them.
+        with transaction.atomic(), override_settings(EMAIL_BACKEND='django.core.mail.backends.dummy.EmailBackend'):
             Site.objects.update_or_create(pk=1, defaults={'domain': 'localhost:8000', 'name': 'CarHub'})
             self._features()
             self._users()
             cars = self._cars()
             self._activity(cars)
+            self._reservations(cars)
 
         self.stdout.write(self.style.SUCCESS(
             f'Seeded {Car.objects.count()} cars, {User.objects.count()} users. '
@@ -119,6 +125,8 @@ class Command(BaseCommand):
         )
         user.date_joined = timezone.now() - timedelta(days=self.rng.randint(120, 900))
         user.save(update_fields=['date_joined'])
+        # Demo inboxes don't exist, so mark the address verified (sign-in requires a verified email).
+        EmailAddress.objects.create(user=user, email=user.email, verified=True, primary=True)
         return user
 
     def _features(self):
@@ -317,14 +325,8 @@ class Command(BaseCommand):
                 Message.objects.filter(pk=msg.pk).update(created_at=sent_at)
                 Notification.objects.filter(verb='message', created_at__gte=msg.created_at).update(created_at=sent_at, unread=not msg.read)
 
-        # A paid (demo) reservation, saved cars and something in the cart
-        reserved_car = rng.choice([c for c in live if c.price < 40_000_000])
-        order = create_order(buyer, [reserved_car], {
-            'full_name': buyer.get_full_name(), 'email': buyer.email, 'phone': buyer.profile.phone,
-            'inspection_state': reserved_car.state, 'notes': 'I would like to inspect on a Saturday morning.',
-        }, provider='demo')
-        order.mark_paid(reference=f'DEMO-{order.number}')
-        remaining = [c for c in live if c.pk != reserved_car.pk]
+        # Saved cars and something in the cart (reservations are created in _reservations)
+        remaining = [c for c in live if c.price < 120_000_000]
         for car in rng.sample(remaining, 6):
             WishlistItem.objects.create(user=buyer, car=car)
         cart = Cart.objects.create(user=buyer)
@@ -338,3 +340,60 @@ class Command(BaseCommand):
             experience_years=3, additional_info='I sell 3–5 cars a month and want my listings to go live faster.',
         )
         Notification.objects.create(user=self.admin, verb='application', message='New seller verification request from Femi Adebayo')
+
+    # ------------------------------------------------------------------
+    def _reserve(self, buyer, car, days_ago, note=''):
+        """A paid demo reservation, back-dated so the timeline reads naturally."""
+        when = timezone.now() - timedelta(days=days_ago, hours=self.rng.randint(1, 8))
+        order = create_order(buyer, [car], {
+            'full_name': buyer.get_full_name(), 'email': buyer.email, 'phone': buyer.profile.phone,
+            'inspection_state': car.state, 'notes': note,
+            'preferred_date': (timezone.now() + timedelta(days=self.rng.randint(2, 6))).date(),
+            'preferred_time': self.rng.choice(['morning', 'afternoon', 'evening']),
+        }, provider='demo')
+        order.mark_paid(reference=f'DEMO-{order.number}')
+        type(order).objects.filter(pk=order.pk).update(created_at=when, paid_at=when + timedelta(minutes=3))
+        order.refresh_from_db()
+        car.refresh_from_db()
+        return order.items.get()
+
+    def _schedule(self, item, in_days, hour):
+        when = (timezone.localtime() + timedelta(days=in_days)).replace(hour=hour, minute=0, second=0, microsecond=0)
+        seller = item.seller
+        address = f"{seller.profile.company_name or seller.get_full_name()} showroom, {seller.profile.city}"
+        services.schedule_inspection(item, when, address, 'Ask for the sales desk at the gate. Bring a valid ID.', seller)
+
+    def _reservations(self, cars):
+        """Reservations at every stage of the lifecycle, so buyer and dealer dashboards have content.
+
+        Demo buyer (buyer@):   one awaiting the seller, one inspection scheduled, one completed purchase.
+        Demo dealer (harborpoint@): new reservations to confirm, a scheduled inspection, a completed and a cancelled sale.
+        """
+        rng = self.rng
+        harbor = self.dealers[0]
+        tolu, amaka, segun, halima, david = self.buyers
+        in_cart = set(CartItem.objects.values_list('car_id', flat=True))
+        pool = {d.pk: [c for c in cars if c.created_by_id == d.pk and c.approval_status == 'approved'
+                       and c.status == 'available' and c.price < 150_000_000 and c.pk not in in_cart]
+                for d in self.dealers}
+        take = lambda dealer: pool[dealer.pk].pop(rng.randrange(len(pool[dealer.pk])))  # noqa: E731
+        others = self.dealers[1:]
+
+        # Demo buyer
+        self._reserve(tolu, take(rng.choice(others)), 1, 'I would like to inspect on a Saturday morning.')
+        self._schedule(self._reserve(tolu, take(rng.choice(others)), 3, 'Coming with my mechanic.'), 2, 11)
+        bought = self._reserve(tolu, take(rng.choice(others)), 30)
+        self._schedule(bought, -26, 10)
+        services.complete_sale(bought, bought.seller)
+        type(bought).objects.filter(pk=bought.pk).update(completed_at=bought.inspection_at + timedelta(hours=2))
+
+        # Demo dealer
+        self._reserve(amaka, take(harbor), 0, 'Is the price slightly negotiable after inspection?')
+        self._reserve(david, take(harbor), 1)
+        self._schedule(self._reserve(segun, take(harbor), 4, 'Please have the service records ready.'), 1, 14)
+        sold = self._reserve(halima, take(harbor), 21)
+        self._schedule(sold, -18, 12)
+        services.complete_sale(sold, harbor)
+        type(sold).objects.filter(pk=sold.pk).update(completed_at=sold.inspection_at + timedelta(hours=3))
+        cancelled = self._reserve(segun, take(harbor), 12)
+        services.cancel_reservation(cancelled, segun, 'buyer', 'Found a car closer to home, sorry.')

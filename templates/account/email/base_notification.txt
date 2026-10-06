@@ -1,0 +1,8 @@
+{% extends "account/email/base_message.txt" %}
+{% block content %}{% autoescape off %}{% block notification_message %}{% endblock notification_message %}
+
+When: {{ timestamp|date:'l j F Y, g:i A' }}
+IP address: {{ ip }}
+Device: {{ user_agent }}
+
+Wasn't you? Reset your password now: {{ site_url }}/accounts/password/reset/{% endautoescape %}{% endblock %}

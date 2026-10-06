@@ -1,0 +1,7 @@
+{# Checkout progress. Usage: {% include 'partials/stepper.html' with step=2 %} #}
+<ol class="stepper" aria-label="Checkout progress">
+  <li class="{% if step > 1 %}is-done{% else %}is-current{% endif %}"><span>{% if step > 1 %}<a href="{% url 'cars:cart' %}">Cart</a>{% else %}Cart{% endif %}</span></li>
+  <li class="{% if step > 2 %}is-done{% elif step == 2 %}is-current{% endif %}"><span>{% if step > 2 %}<a href="{% url 'cars:checkout' %}">Your details</a>{% else %}Your details{% endif %}</span></li>
+  <li class="{% if step > 3 %}is-done{% elif step == 3 %}is-current{% endif %}"><span>Review &amp; pay</span></li>
+  <li class="{% if step >= 4 %}is-done{% endif %}"><span>Confirmed</span></li>
+</ol>

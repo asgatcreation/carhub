@@ -1,0 +1,8 @@
+{% extends "account/email/base_message.txt" %}
+{% block content %}{% autoescape off %}{% if user.first_name %}Hi {{ user.first_name }},{% else %}Hi there,{% endif %}
+
+Welcome to CarHub! Enter this code in the window where you signed up to activate your account:
+
+    {{ code }}
+
+It expires in 15 minutes and can only be used once. Didn't sign up? Ignore this email.{% endautoescape %}{% endblock content %}

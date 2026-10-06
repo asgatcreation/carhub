@@ -1,0 +1,8 @@
+{% extends 'account/_auth_layout.html' %}
+{% block title %}Verify your email | CarHub{% endblock %}
+{% block auth %}
+<div class="auth-icon">{% icon 'mail' 26 %}</div>
+<h1>Verify your email</h1>
+<p class="muted">We've sent you an email to confirm your address. Follow it to finish setting up your account, and check spam if it doesn't arrive in a few minutes.</p>
+<a class="btn btn-dark btn-lg btn-block" href="{% url 'account_login' %}">Back to sign in</a>
+{% endblock %}

@@ -1,0 +1,8 @@
+{% extends "account/email/base_message.txt" %}
+{% block content %}{% autoescape off %}{% if user.first_name %}Hi {{ user.first_name }},{% else %}Hi there,{% endif %}
+
+Enter this code on CarHub to verify your email address:
+
+    {{ code }}
+
+It expires in 15 minutes and can only be used once. If you didn't request this, ignore this email.{% endautoescape %}{% endblock content %}

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<meta name="color-scheme" content="light only">
+<title>{% block title %}CarHub{% endblock %}</title>
+<style>
+  body { margin: 0; padding: 0; background: #eef0f3; }
+  a { color: #1d4ed8; }
+  @media (max-width: 600px) {
+    .shell { width: 100% !important; }
+    .pad { padding-left: 24px !important; padding-right: 24px !important; }
+    .code-cell { width: 40px !important; height: 52px !important; font-size: 26px !important; }
+    h1.title { font-size: 24px !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background:#eef0f3;font-family:'Segoe UI',Helvetica,Arial,sans-serif;color:#334155;-webkit-font-smoothing:antialiased">
+  {# Inbox preview text. It never contains the code, so the code is only visible once the email is opened. #}
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all">{% block preheader %}{% endblock %}&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#eef0f3">
+    <tr><td align="center" style="padding:32px 12px">
+
+      <table role="presentation" class="shell" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:560px">
+        <tr><td style="padding:0 4px 18px">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+            <td style="width:34px;height:34px;background:#0f1419;border-radius:10px;text-align:center;vertical-align:middle;font-size:18px;line-height:34px;color:#ffb21e;font-weight:800">&#9670;</td>
+            <td style="padding-left:10px;font-size:21px;font-weight:800;letter-spacing:-.4px;color:#0f1419">Car<span style="color:#e89a00">Hub</span></td>
+          </tr></table>
+        </td></tr>
+
+        <tr><td style="background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 1px 3px rgba(15,20,25,.06)">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr><td style="height:6px;background:#ffb21e;background-image:linear-gradient(90deg,#ffb21e,#ff7a1a);font-size:0;line-height:0">&nbsp;</td></tr>
+            <tr><td class="pad" style="padding:40px 44px 8px">
+              {% block icon %}{% endblock %}
+              <h1 class="title" style="margin:0 0 12px;font-size:28px;line-height:1.2;font-weight:800;letter-spacing:-.5px;color:#0f1419">{% block heading %}{% endblock %}</h1>
+              <div style="font-size:16px;line-height:1.6;color:#475569">{% block intro %}{% endblock %}</div>
+            </td></tr>
+            {% block main %}{% endblock %}
+            <tr><td class="pad" style="padding:8px 44px 40px;font-size:14px;line-height:1.6;color:#64748b">{% block note %}{% endblock %}</td></tr>
+          </table>
+        </td></tr>
+
+        <tr><td style="padding:24px 8px 0;text-align:center;font-size:12.5px;line-height:1.7;color:#94a3b8">
+          <strong style="color:#64748b">CarHub</strong> &middot; Nigeria's marketplace for verified cars<br>
+          Reviewed listings &middot; Refundable deposits &middot; In-app chat<br>
+          <a href="{{ site_url }}" style="color:#94a3b8;text-decoration:underline">{{ site_url|cut:'https://'|cut:'http://' }}</a>
+          <div style="margin-top:10px">This is an automated message. Never share your codes or password, not even with CarHub staff.</div>
+        </td></tr>
+      </table>
+
+    </td></tr>
+  </table>
+</body>
+</html>

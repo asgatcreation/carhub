@@ -1,0 +1,7 @@
+{# Six-box one-time-code input. One real <input> sits over the boxes, so typing, paste and SMS/email autofill all work. #}
+<div class="otp {% if field.errors %}has-error{% endif %}" data-otp>
+  <label class="sr-only" for="id_code">{{ label|default:'6-digit code' }}</label>
+  <input class="otp-input" id="id_code" name="code" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" required autofocus value="{{ field.value|default:'' }}" aria-describedby="otp-help">
+  <div class="otp-cells" aria-hidden="true"><span></span><span></span><span></span><span class="gap"></span><span></span><span></span><span></span></div>
+</div>
+{% for e in field.errors %}<p class="error text-center mt-1" role="alert">{% icon 'alert' 14 %} {{ e }}</p>{% endfor %}

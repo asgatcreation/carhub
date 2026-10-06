@@ -1,12 +1,17 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="hero">
+<section class="hero hero-v3">
+  <div class="hero-glow" aria-hidden="true"></div>
   <div class="container hero-inner">
-    <div>
-      <span class="eyebrow" style="color:var(--brand)">{% icon 'verified' 16 %} Nigeria's verified car marketplace</span>
-      <h1>Find your next car <span class="hl">without the guesswork.</span></h1>
-      <p class="lead">{{ stats.listings }} inspected cars from vetted dealers and private sellers across {{ stats.states }} states. Reserve online with a refundable deposit, pay the balance after inspection.</p>
+    <div class="hero-copy">
+      <a class="hero-pill" href="{% url 'cars:browse' %}?sort=newest">
+        <span class="dot-live" aria-hidden="true"></span>
+        <span><strong>{{ stats.listings }}</strong> verified cars live now</span>
+        {% icon 'arrow-right' 14 %}
+      </a>
+      <h1>Buy your next<br><span class="rotator" data-rotate="SUV,sedan,Lexus,Toyota,first car,family car"><span>car</span></span><br>with total confidence.</h1>
+      <p class="lead">Every listing is reviewed by our team and priced against the market. Reserve online with a <strong>refundable ₦250k deposit</strong>, inspect in person, then pay the balance.</p>
 
       <form class="search-panel" action="{% url 'cars:browse' %}" method="get" data-search-panel>
         <div class="search-tabs" role="tablist">
@@ -46,36 +51,69 @@
       </form>
 
       <div class="quick-links">
+        <span class="ql-label">Popular:</span>
         <a href="{% url 'cars:browse' %}?brand=Toyota&q=Camry">Toyota Camry</a>
         <a href="{% url 'cars:browse' %}?brand=Lexus">Lexus</a>
         <a href="{% url 'cars:browse' %}?body=suv&max_price=50000000">SUVs under ₦50M</a>
         <a href="{% url 'cars:browse' %}?fuel=hybrid">Hybrids</a>
-        <a href="{% url 'cars:browse' %}?state=FCT">Cars in Abuja</a>
+        <a href="{% url 'cars:browse' %}?state=FCT">Abuja</a>
       </div>
+
+      <ul class="hero-proof">
+        <li>{% icon 'shield' 18 %}<span><strong>Refundable</strong> deposits</span></li>
+        <li>{% icon 'verified' 18 %}<span><strong>{{ stats.sellers }}</strong> verified dealers</span></li>
+        <li>{% icon 'trend' 18 %}<span><strong>Fair-price</strong> insights</span></li>
+      </ul>
     </div>
 
-    <div class="hero-visual" aria-hidden="true">
-      {% for car in featured|slice:":3" %}
-        <a class="hero-card c{{ forloop.counter }}" href="{{ car.get_absolute_url }}" tabindex="-1">
-          <img src="{% if forloop.first %}{{ car.primary_image }}{% else %}{{ car.thumbnail }}{% endif %}" alt="" referrerpolicy="no-referrer">
-          <div class="hero-card-info"><strong>{{ car.title }}</strong><span>{{ car.price|naira_short }}</span></div>
-        </a>
-      {% endfor %}
-      <div class="hero-chip">{% icon 'shield' 20 %} Every listing reviewed by our team</div>
+    {% if spotlight %}
+    <div class="hero-stage" data-spotlight>
+      <div class="stage-frame">
+        {% for car in spotlight %}
+          <a class="stage-slide{% if forloop.first %} is-active{% endif %}" href="{{ car.get_absolute_url }}" {% if not forloop.first %}aria-hidden="true" tabindex="-1"{% endif %}>
+            <img src="{{ car.primary_image }}" alt="{{ car.full_title }}" {% if not forloop.first %}loading="lazy"{% else %}fetchpriority="high"{% endif %} referrerpolicy="no-referrer">
+            <div class="stage-info">
+              <div class="stage-meta">{{ car.year }} · {{ car.mileage|km }} · {{ car.location }}</div>
+              <div class="stage-title">{{ car.title }}</div>
+              <div class="stage-price"><strong>{{ car.price|naira_short }}</strong><span>or ~{{ car.price|monthly }}/mo</span></div>
+            </div>
+            {% if car.insight and car.insight.level != 'high' %}
+              <span class="stage-chip chip-insight insight-{{ car.insight.level }}">{% icon 'trend' 15 %} {{ car.insight.label }}{% if car.insight.pct < 0 %} · {{ car.insight.pct|absval }}% below market{% endif %}</span>
+            {% endif %}
+          </a>
+        {% endfor %}
+        <div class="stage-chip chip-verified">{% icon 'check-circle' 16 %}<span><strong>Inspected &amp; approved</strong><small>by the CarHub team</small></span></div>
+        <div class="stage-progress" aria-hidden="true"><i></i></div>
+      </div>
+      <div class="stage-thumbs" role="tablist" aria-label="Featured cars">
+        {% for car in spotlight %}
+          <button type="button" role="tab" class="{% if forloop.first %}is-active{% endif %}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}" aria-label="{{ car.title }}" data-slide="{{ forloop.counter0 }}">
+            <img src="{{ car.thumbnail }}" alt="" loading="lazy" referrerpolicy="no-referrer">
+            <span>{{ car.brand }}<small>{{ car.price|naira_short }}</small></span>
+          </button>
+        {% endfor %}
+      </div>
     </div>
+    {% endif %}
   </div>
 </section>
 
 <div class="container">
   <div class="stats-strip">
-    <div><strong class="num">{{ stats.listings }}</strong><span>Cars available now</span></div>
-    <div><strong class="num">{{ stats.sellers }}</strong><span>Verified dealers</span></div>
-    <div><strong class="num">{{ stats.states }}</strong><span>States covered</span></div>
+    <div><strong class="num" data-count-to="{{ stats.listings }}">{{ stats.listings }}</strong><span>Cars available now</span></div>
+    <div><strong class="num" data-count-to="{{ stats.sellers }}">{{ stats.sellers }}</strong><span>Verified dealers</span></div>
+    <div><strong class="num" data-count-to="{{ stats.states }}">{{ stats.states }}</strong><span>States covered</span></div>
     <div><strong>100%</strong><span>Refundable reservation deposit</span></div>
   </div>
 </div>
 
-<section class="section">
+<div class="marquee mt-4" aria-label="Brands on CarHub">
+  <div class="marquee-track">
+    {% for loop_ in '12' %}{% for b in all_brands %}<a href="{% url 'cars:browse' %}?brand={{ b.brand|urlencode }}"{% if loop_ == '2' %} aria-hidden="true" tabindex="-1"{% endif %}>{{ b.brand }}<small>{{ b.n }}</small></a>{% endfor %}{% endfor %}
+  </div>
+</div>
+
+<section class="section" data-reveal>
   <div class="container">
     <div class="section-head">
       <div><h2>Browse by body type</h2><p>From city sedans to seven-seat SUVs.</p></div>
@@ -92,19 +130,31 @@
   </div>
 </section>
 
-<section class="section" style="padding-top:0">
+{% if deals %}
+<section class="section" style="padding-top:0" data-reveal>
+  <div class="container">
+    <div class="section-head">
+      <div><span class="eyebrow">{% icon 'trend' 14 %} Price insight</span><h2>Best deals right now</h2><p>Priced below similar listings of the same make and model, adjusted for year.</p></div>
+      <a href="{% url 'cars:browse' %}" class="link-arrow">Browse all {% icon 'arrow-right' 18 %}</a>
+    </div>
+    <div class="cars-grid rail">{% for car in deals %}{% include 'partials/car_card.html' with saved=saved_ids %}{% endfor %}</div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section" style="padding-top:0" data-reveal>
   <div class="container">
     <div class="section-head">
       <div><span class="eyebrow">{% icon 'star' 14 %} Hand-picked</span><h2>Featured cars</h2><p>Great value listings our team recommends this week.</p></div>
       <a href="{% url 'cars:browse' %}" class="link-arrow">View all {% icon 'arrow-right' 18 %}</a>
     </div>
-    <div class="cars-grid">
+    <div class="cars-grid rail">
       {% for car in featured %}{% include 'partials/car_card.html' with saved=saved_ids %}{% endfor %}
     </div>
   </div>
 </section>
 
-<section class="section" style="background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+<section class="section" style="background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line)" data-reveal>
   <div class="container">
     <div class="section-head" style="justify-content:center;text-align:center">
       <div><span class="eyebrow">How it works</span><h2>Buying a car, minus the stress</h2><p>Online convenience with the safety of an in-person inspection.</p></div>
@@ -117,7 +167,7 @@
   </div>
 </section>
 
-<section class="section">
+<section class="section" data-reveal>
   <div class="container">
     <div class="section-head">
       <div><h2>Shop by brand</h2><p>The makes Nigerian drivers love most.</p></div>
@@ -150,7 +200,7 @@
       <div><span class="eyebrow">{% icon 'clock' 14 %} Just listed</span><h2>Latest arrivals</h2></div>
       <a href="{% url 'cars:browse' %}?sort=newest" class="link-arrow">See what's new {% icon 'arrow-right' 18 %}</a>
     </div>
-    <div class="cars-grid">
+    <div class="cars-grid rail">
       {% for car in latest %}{% include 'partials/car_card.html' with saved=saved_ids %}{% endfor %}
     </div>
   </div>
@@ -160,7 +210,7 @@
 <section class="section" style="padding-top:0">
   <div class="container">
     <div class="section-head"><div><h2>Recently viewed</h2></div></div>
-    <div class="cars-grid">{% for car in recent %}{% include 'partials/car_card.html' with saved=saved_ids %}{% endfor %}</div>
+    <div class="cars-grid rail">{% for car in recent %}{% include 'partials/car_card.html' with saved=saved_ids %}{% endfor %}</div>
   </div>
 </section>
 {% endif %}

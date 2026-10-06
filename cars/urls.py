@@ -20,10 +20,14 @@ urlpatterns = [
     path('saved/', views.wishlist_view, name='saved'),
     path('saved/toggle/<int:car_id>/', views.wishlist_toggle, name='wishlist_toggle'),
     path('checkout/', views.checkout, name='checkout'),
+    path('checkout/review/', views.checkout_review, name='checkout_review'),
     path('checkout/paystack/callback/', views.paystack_callback, name='paystack_callback'),
     path('webhooks/paystack/', views.paystack_webhook, name='paystack_webhook'),
     path('orders/', views.orders, name='orders'),
     path('orders/<str:number>/', views.order_detail, name='order_detail'),
+    path('orders/item/<int:item_id>/cancel/', views.order_item_cancel, name='order_item_cancel'),
+    path('reservations/', views.sales, name='sales'),
+    path('reservations/<int:item_id>/', views.sale_action, name='sale_action'),
 
     # Selling
     path('sell/', views.sell, name='sell'),

@@ -163,20 +163,25 @@
         <div>
           <div class="small muted">Price</div>
           <div class="price price-lg">{{ car.price|naira }}</div>
+          <div class="monthly">&asymp; {{ car.price|monthly }}/month with 30% down</div>
         </div>
-        {% if car.condition != 'new' %}<span class="badge badge-success">Negotiable</span>{% endif %}
+        {% if car.insight %}<span class="insight insight-{{ car.insight.level }}"><span class="bar"><i></i><i></i><i></i></span>{{ car.insight.label }}</span>
+        {% elif car.condition != 'new' %}<span class="badge badge-success">Negotiable</span>{% endif %}
       </div>
 
       {% if car.is_available %}
-        <div class="deposit-note">
-          {% icon 'lock' 18 %}
-          <div>Reserve it today for a <strong>{{ deposit|naira }}</strong> refundable deposit. Pay the remaining {{ balance|naira }} after you've inspected the car.</div>
-        </div>
+        <div class="pay-today"><span class="small" style="font-weight:700">{% icon 'lock' 15 %} Pay today to reserve</span><strong class="num">{{ deposit|naira }}</strong></div>
+        <p class="small muted mt-1 mb-0">Fully refundable. Pay the remaining <strong style="color:var(--ink)">{{ balance|naira }}</strong> to the seller only after you've inspected the car.</p>
         {% if not is_owner %}
         <form method="post" action="{% url 'cars:cart_add' car.pk %}" class="actions" data-cart-form>
           {% csrf_token %}
-          <button type="submit" name="buy_now" value="1" class="btn btn-primary btn-lg">{% icon 'lock' 20 %} Reserve now</button>
-          <button type="submit" class="btn btn-lg">{% icon 'bag' 20 %} <span data-in-cart-label>{% if in_cart %}In your cart{% else %}Add to cart{% endif %}</span></button>
+          {% if user.is_authenticated %}
+            <button type="submit" name="buy_now" value="1" class="btn btn-primary btn-lg">{% icon 'lock' 20 %} Reserve now</button>
+            <button type="submit" class="btn btn-lg">{% icon 'bag' 20 %} <span data-in-cart-label>{% if in_cart %}In your cart{% else %}Add to cart{% endif %}</span></button>
+          {% else %}
+            <button type="submit" name="buy_now" value="1" class="btn btn-primary btn-lg">{% icon 'lock' 20 %} Sign in to reserve</button>
+            <p class="xs subtle text-center mb-0">Takes seconds. We'll bring you straight back to checkout.</p>
+          {% endif %}
         </form>
         {% else %}
           <a href="{% url 'cars:listing_edit' car.slug %}" class="btn btn-dark btn-block mt-2">{% icon 'edit' 18 %} Edit your listing</a>
@@ -186,6 +191,18 @@
         <div class="notice mt-2">{% icon 'info' 20 %}<div>This car has been {{ car.get_status_display|lower }}. <a class="link" href="{% url 'cars:browse' %}?brand={{ car.brand|urlencode }}&body={{ car.body_type }}">See similar cars</a></div></div>
       {% endif %}
     </div>
+
+    {% if car.insight %}
+    <div class="card insight-panel">
+      <div class="row between"><h3 style="font-size:1.05rem;margin:0">Price insight</h3><span class="insight insight-{{ car.insight.level }}"><span class="bar"><i></i><i></i><i></i></span>{{ car.insight.label }}</span></div>
+      <p class="small muted mt-1 mb-0">
+        {% if car.insight.pct < 0 %}{{ car.insight.pct|absval }}% below{% elif car.insight.pct > 0 %}{{ car.insight.pct }}% above{% else %}Right on{% endif %}
+        the market estimate of <strong style="color:var(--ink)">{{ car.insight.market|naira_short }}</strong>, based on {{ car.insight.count }} similar {{ car.brand }} {{ car.model }} listing{{ car.insight.count|pluralize }} (adjusted for year).
+      </p>
+      <div class="range-track"><span class="range-marker" style="left:{{ car.insight.position }}%" title="This car"></span></div>
+      <div class="range-labels"><span>{{ car.insight.low|naira_short }}</span><span>{{ car.insight.high|naira_short }}</span></div>
+    </div>
+    {% endif %}
 
     {% if seller %}
     <div class="card seller-card">

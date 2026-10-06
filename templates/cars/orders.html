@@ -1,32 +1,28 @@
 {% extends 'users/account_base.html' %}
 {% block title %}My orders | CarHub{% endblock %}
 {% block account_content %}
-<div class="row between mb-2"><h2 class="mb-0">My orders</h2></div>
+<div class="row between mb-2"><h2 class="mb-0">My orders</h2><a class="btn btn-sm" href="{% url 'cars:browse' %}">{% icon 'search' 16 %} Find a car</a></div>
 {% if orders %}
   <div class="card">
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Order</th><th>Car</th><th>Deposit</th><th>Status</th><th>Date</th><th></th></tr></thead>
-        <tbody>
-          {% for order in orders %}
-            <tr>
-              <td><strong class="num">{{ order.number }}</strong>{% if order.provider == 'demo' %}<div class="xs subtle">Demo</div>{% endif %}</td>
-              <td>{% for item in order.items.all %}<div>{{ item.title }}</div>{% endfor %}</td>
-              <td class="num">{{ order.deposit_total|naira }}</td>
-              <td>{% include 'partials/order_status.html' %}</td>
-              <td class="small muted">{{ order.created_at|date:'j M Y' }}</td>
-              <td><a class="btn btn-sm" href="{{ order.get_absolute_url }}">View</a></td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+    {% for order in orders %}
+      {% for item in order.items.all %}
+        <a class="list-item order-line" href="{{ order.get_absolute_url }}">
+          <img src="{{ item.image_url }}" alt="" style="width:84px;height:60px;border-radius:10px;object-fit:cover;flex:none;background:var(--media-bg)" referrerpolicy="no-referrer">
+          <div class="grow" style="min-width:0">
+            <strong style="color:var(--ink)">{{ item.title }}</strong>
+            <div class="xs muted">{{ order.number }} · {{ order.created_at|date:'j M Y' }}{% if order.provider == 'demo' %} · demo{% endif %}</div>
+            <div class="small mt-1">{% if item.status == 'scheduled' %}Inspection {{ item.inspection_at|date:'D j M, g:i A' }}{% elif item.status == 'reserved' %}Deposit {{ item.deposit|naira }} paid · balance {{ item.balance|naira }}{% elif item.status == 'completed' %}Bought for {{ item.price|naira }}{% endif %}</div>
+          </div>
+          <div class="meta">{% if order.status == 'paid' %}{% include 'partials/item_status.html' %}{% else %}{% include 'partials/order_status.html' %}{% endif %}</div>
+        </a>
+      {% endfor %}
+    {% endfor %}
   </div>
 {% else %}
   <div class="empty">
     <div class="empty-icon">{% icon 'receipt' 28 %}</div>
     <h3>No orders yet</h3>
-    <p>When you reserve a car, your order and inspection details will appear here.</p>
+    <p>When you reserve a car, its inspection and purchase progress will appear here.</p>
     <a href="{% url 'cars:browse' %}" class="btn btn-dark">Find a car</a>
   </div>
 {% endif %}

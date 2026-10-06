@@ -1,0 +1,45 @@
+{% extends 'account/_auth_layout.html' %}
+{% block title %}Verify your email | CarHub{% endblock %}
+{% block side_title %}One last step.{% endblock %}
+{% block side_text %}Verifying your email keeps CarHub safe for buyers and sellers, and makes sure reservation receipts reach you.{% endblock %}
+{% block auth %}
+{% include 'account/_flow_steps.html' with steps='Account,Verify email,Start buying' current=2 %}
+<div class="auth-icon">{% icon 'mail' 26 %}</div>
+<h1>Check your email</h1>
+<p class="muted">We sent a 6-digit code to <strong class="ink">{{ email }}</strong>. Enter it below to activate your account. It expires in 15 minutes.</p>
+
+<form method="post" action="{% url 'account_email_verification_sent' %}" novalidate data-busy data-otp-form>
+  {% csrf_token %}
+  {% include 'account/_otp.html' with field=verify_form.code label='Email verification code' %}
+  {{ redirect_field }}
+  <button class="btn btn-primary btn-lg btn-block mt-2" type="submit">Verify &amp; continue</button>
+</form>
+
+<div class="otp-help" id="otp-help">
+  <p class="small muted mb-1">{% icon 'info' 14 %} Didn't get it? Check spam or promotions. Codes can take a minute to arrive.</p>
+  <div class="row row-wrap center" style="gap:6px 14px">
+    {% if can_resend %}
+      <form method="post" action="{% url 'account_email_verification_sent' %}" class="inline">
+        {% csrf_token %}<input type="hidden" name="action" value="resend">{{ redirect_field }}
+        <button class="link-btn" type="submit" data-resend-wait="30">Resend code</button>
+      </form>
+    {% endif %}
+    {% if can_change %}<button class="link-btn" type="button" data-toggle-target="#change-email">Use a different email</button>{% endif %}
+    {% if cancel_url %}<a class="link small" href="{{ cancel_url }}">Cancel</a>{% else %}
+      <form method="post" action="{% url 'account_logout' %}" class="inline">{% csrf_token %}<input type="hidden" name="next" value="{% url 'account_signup' %}"><button class="link-btn muted" type="submit">Start over</button></form>
+    {% endif %}
+  </div>
+</div>
+
+{% if can_change %}
+  <form id="change-email" method="post" action="{% url 'account_email_verification_sent' %}" class="panel-muted mt-2" {% if not change_form.errors %}hidden{% endif %} novalidate>
+    {% csrf_token %}<input type="hidden" name="action" value="change">{{ redirect_field }}
+    <div class="field mb-1 {% if change_form.email.errors %}has-error{% endif %}">
+      <label for="id_change_email">New email address</label>
+      <input type="email" name="email" id="id_change_email" autocomplete="email" required value="{{ change_form.email.value|default:'' }}">
+      {% for e in change_form.email.errors %}<p class="error">{{ e }}</p>{% endfor %}
+    </div>
+    <button class="btn btn-dark btn-block" type="submit">Send code to new email</button>
+  </form>
+{% endif %}
+{% endblock %}

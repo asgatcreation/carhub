@@ -1,0 +1,5 @@
+{% if item.status == 'reserved' %}<span class="badge badge-warning">{% icon 'clock' 12 %} Awaiting seller</span>
+{% elif item.status == 'scheduled' %}<span class="badge badge-info">{% icon 'calendar' 12 %} Inspection scheduled</span>
+{% elif item.status == 'completed' %}<span class="badge badge-success">{% icon 'check' 12 %} Completed</span>
+{% elif item.status == 'cancelled' %}<span class="badge badge-danger">Cancelled{% if item.refund_status == 'refunded' %} · refunded{% elif item.refund_status == 'requested' %} · refund processing{% endif %}</span>
+{% else %}<span class="badge">{{ item.get_status_display }}</span>{% endif %}

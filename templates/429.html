@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Slow down | CarHub{% endblock %}
+{% block content %}
+<div class="error-page">
+  <div>
+    <div class="code">429</div>
+    <h1 style="font-size:2rem">Too many attempts</h1>
+    <p class="muted">For your security we've paused this for a few minutes. Please wait a moment and try again.</p>
+    <div class="row row-wrap" style="justify-content:center">
+      <a class="btn btn-dark" href="javascript:history.back()">Go back</a>
+      <a class="btn" href="{% url 'home' %}">Go home</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

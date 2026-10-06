@@ -1,0 +1,80 @@
+{% extends 'users/account_base.html' %}
+{% block title %}Reservations | CarHub{% endblock %}
+{% block account_content %}
+<div class="row between row-wrap mb-2">
+  <div><h2 class="mb-0">Reservations</h2><p class="muted mb-0 small">Buyers who paid a deposit for your cars. Confirm an inspection, then complete the sale.</p></div>
+</div>
+<div class="tabs-nav">
+  <a href="?status=active" class="{% if status == 'active' %}is-active{% endif %}">Active <span class="badge">{{ counts.active }}</span></a>
+  <a href="?status=completed" class="{% if status == 'completed' %}is-active{% endif %}">Completed <span class="badge">{{ counts.completed }}</span></a>
+  <a href="?status=cancelled" class="{% if status == 'cancelled' %}is-active{% endif %}">Cancelled <span class="badge">{{ counts.cancelled }}</span></a>
+</div>
+
+{% if items %}
+  <div class="card">
+    {% for item in items %}
+      {% with buyer=item.order %}
+      <div class="reservation">
+        <a class="thumb" href="{% if item.car %}{{ item.car.get_absolute_url }}{% else %}#{% endif %}"><img src="{{ item.image_url }}" alt="" referrerpolicy="no-referrer"></a>
+        <div>
+          <div class="row between row-wrap" style="align-items:flex-start">
+            <h3 style="font-family:var(--font);font-size:1.05rem;margin:0">{{ item.title }}</h3>
+            {% include 'partials/item_status.html' %}
+          </div>
+          <div class="small muted mt-1">Order {{ buyer.number }} · reserved {{ buyer.paid_at|ago }}</div>
+          <dl class="mt-2" style="display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.9rem;margin-bottom:0">
+            <dt class="muted">Buyer</dt><dd style="margin:0;font-weight:650">{{ buyer.full_name }}</dd>
+            <dt class="muted">Phone</dt><dd style="margin:0"><a class="link" href="tel:{{ buyer.phone }}">{{ buyer.phone }}</a></dd>
+            <dt class="muted">Wants to inspect</dt><dd style="margin:0">{{ buyer.preferred_date|date:'D j M' }} · {{ buyer.get_preferred_time_display }}, {{ buyer.inspection_state }}</dd>
+            <dt class="muted">Balance due</dt><dd style="margin:0;font-weight:700" class="num">{{ item.balance|naira }}</dd>
+          </dl>
+          {% if buyer.notes %}<p class="small mt-1 mb-0">“{{ buyer.notes }}”</p>{% endif %}
+          {% if item.status == 'scheduled' %}<div class="notice info mt-2">{% icon 'calendar' 18 %}<div class="small"><strong>{{ item.inspection_at|date:'l j F, g:i A' }}</strong> · {{ item.inspection_address }}</div></div>{% endif %}
+          {% if item.status == 'cancelled' %}<p class="small muted mt-2 mb-0">Cancelled by {{ item.cancelled_by }}{% if item.cancel_reason %}: {{ item.cancel_reason }}{% endif %}</p>{% endif %}
+        </div>
+        <div>
+          {% if item.is_active %}
+            <details class="inline-panel" {% if item.status == 'reserved' %}open{% endif %}>
+              <summary class="btn btn-sm {% if item.status == 'reserved' %}btn-dark{% endif %}">{% icon 'calendar' 15 %} {% if item.status == 'scheduled' %}Reschedule{% else %}Confirm inspection{% endif %}</summary>
+              <form method="post" action="{% url 'cars:sale_action' item.pk %}">
+                {% csrf_token %}<input type="hidden" name="action" value="schedule">
+                <div class="field mb-1"><label for="when-{{ item.pk }}">Date &amp; time</label>
+                  <input id="when-{{ item.pk }}" type="datetime-local" name="inspection_at" required value="{% if item.inspection_at %}{{ item.inspection_at|date:'Y-m-d\TH:i' }}{% elif buyer.preferred_date %}{{ buyer.preferred_date|date:'Y-m-d' }}T{% if buyer.preferred_time == 'afternoon' %}13:00{% elif buyer.preferred_time == 'evening' %}16:00{% else %}10:00{% endif %}{% endif %}"></div>
+                <div class="field mb-1"><label for="addr-{{ item.pk }}">Where</label>
+                  <input id="addr-{{ item.pk }}" type="text" name="inspection_address" required maxlength="255" value="{{ item.inspection_address|default:user.profile.company_name }}{% if not item.inspection_address and user.profile.city %} showroom, {{ user.profile.city }}{% endif %}"></div>
+                <div class="field mb-1"><label for="note-{{ item.pk }}">Note (optional)</label>
+                  <textarea id="note-{{ item.pk }}" name="seller_note" rows="2" maxlength="500" placeholder="e.g. Ask for Chinedu at the gate">{{ item.seller_note }}</textarea></div>
+                <button class="btn btn-sm btn-dark btn-block">Send to buyer</button>
+              </form>
+            </details>
+            {% if item.status == 'scheduled' %}
+              <form method="post" action="{% url 'cars:sale_action' item.pk %}" class="mt-1" data-confirm="Mark this sale as completed? The car will be marked sold.">
+                {% csrf_token %}<input type="hidden" name="action" value="complete">
+                <button class="btn btn-sm btn-primary btn-block">{% icon 'check' 15 %} Balance received, complete sale</button>
+              </form>
+            {% endif %}
+            <details class="inline-panel mt-1">
+              <summary class="btn btn-sm btn-ghost">Cancel reservation</summary>
+              <form method="post" action="{% url 'cars:sale_action' item.pk %}" data-confirm="Cancel and refund the buyer's deposit?">
+                {% csrf_token %}<input type="hidden" name="action" value="cancel">
+                <textarea name="reason" rows="2" required maxlength="500" class="input" placeholder="Tell the buyer why"></textarea>
+                <button class="btn btn-sm btn-danger btn-block mt-1">Cancel &amp; refund buyer</button>
+              </form>
+            </details>
+          {% else %}
+            <ol class="timeline">{% for label, when, state in item.timeline %}<li class="{{ state }}"><span class="dot">{% if state == 'done' %}{% icon 'check' 13 %}{% elif state == 'cancelled' %}{% icon 'x' 13 %}{% endif %}</span><strong>{{ label }}</strong>{% if when %}<small>{{ when|date:'j M, g:i A' }}</small>{% endif %}</li>{% endfor %}</ol>
+          {% endif %}
+        </div>
+      </div>
+      {% endwith %}
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty">
+    <div class="empty-icon">{% icon 'calendar' 28 %}</div>
+    <h3>{% if status == 'active' %}No active reservations{% else %}Nothing here yet{% endif %}</h3>
+    <p>When a buyer pays a deposit for one of your cars, you'll confirm their inspection here.</p>
+    <a href="{% url 'cars:my_listings' %}" class="btn btn-dark">View my listings</a>
+  </div>
+{% endif %}
+{% endblock %}

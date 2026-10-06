@@ -1,0 +1,7 @@
+{% extends 'emails/base.html' %}
+{% block title %}You already have an account{% endblock %}
+{% block preheader %}Someone tried to sign up on CarHub with this email address.{% endblock %}
+{% block heading %}You already have an account{% endblock %}
+{% block intro %}Someone tried to create a CarHub account with <strong>{{ email }}</strong>, but an account with this email already exists.{% endblock %}
+{% block main %}<tr><td class="pad" style="padding:24px 44px 8px"><a href="{{ site_url }}/accounts/login/" style="display:inline-block;background:#0f1419;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:14px 26px;border-radius:12px">Sign in</a>&nbsp;&nbsp;<a href="{{ site_url }}/accounts/password/reset/" style="display:inline-block;color:#0f1419;font-weight:700;font-size:15px;padding:14px 8px">Forgot password?</a></td></tr>{% endblock %}
+{% block note %}If this wasn't you, you can ignore this email; your account is safe.{% endblock %}

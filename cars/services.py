@@ -7,6 +7,8 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import transaction
+from django.urls import reverse
+from django.utils import timezone
 
 from .models import Car, Cart, CartItem, Order, OrderItem, WishlistItem
 
@@ -123,7 +125,8 @@ def deposit_for(car):
 def cart_summary(cars):
     vehicles = sum((c.price for c in cars), Decimal('0'))
     deposits = sum((deposit_for(c) for c in cars), Decimal('0'))
-    return {'vehicles_total': vehicles, 'deposit_total': deposits, 'balance_total': vehicles - deposits, 'count': len(cars)}
+    return {'vehicles_total': vehicles, 'deposit_total': deposits, 'balance_total': vehicles - deposits, 'count': len(cars),
+            'deposit_each': Decimal(str(getattr(settings, 'CAR_RESERVATION_DEPOSIT', 250_000)))}
 
 
 @transaction.atomic
@@ -136,7 +139,126 @@ def create_order(user, cars, contact, provider):
         **contact,
     )
     OrderItem.objects.bulk_create([
-        OrderItem(order=order, car=c, title=c.full_title, image_url=c.primary_image, price=c.price, deposit=deposit_for(c))
+        OrderItem(order=order, car=c, seller=c.created_by, title=c.full_title, image_url=c.primary_image,
+                  price=c.price, deposit=deposit_for(c))
         for c in cars
     ])
     return order
+
+
+# ----- reservation lifecycle -----
+
+def _notify(user, actor, verb, message, link):
+    from users.models import Notification
+    if not user:
+        return
+    Notification.objects.create(user=user, actor=actor, verb=verb, message=message, link=link)
+    if user.email:
+        from core.emails import send_branded
+        body, cta = EMAIL_COPY.get(verb, ('', 'Open CarHub'))
+        send_branded(user.email, message, heading=message, body=body, cta_url=link, cta_label=cta)
+
+
+EMAIL_COPY = {
+    'reservation': ('A buyer paid a refundable deposit, so the car is off the market. Confirm an inspection '
+                    'time so they can come and see it.', 'Confirm inspection'),
+    'order_paid': ('Your deposit is in and the car is reserved for you. The seller will confirm an inspection '
+                   'time shortly; you pay the balance only after you have seen the car.', 'View reservation'),
+    'inspection': ('The seller has confirmed when and where you can inspect the car. Bring your mechanic if '
+                   'you like; if anything is wrong, you can cancel and your deposit is refunded.', 'See details'),
+    'completed': ('The sale is complete and the car is yours. Thanks for buying on CarHub. Leaving the seller '
+                  'a review helps other buyers.', 'View order'),
+    'cancelled': ('This reservation has been cancelled and the car is available again. Any deposit paid is '
+                  'refunded to the original payment method.', 'View details'),
+}
+
+
+def on_order_paid(order):
+    """Tell every seller they have a new reservation, and confirm to the buyer."""
+    for item in order.items.select_related('seller'):
+        _notify(item.seller, order.user, 'reservation',
+                f'{order.full_name} reserved your {item.title} — confirm an inspection time',
+                reverse('cars:sales'))
+    _notify(order.user, None, 'order_paid', f'Reservation {order.number} confirmed', order.get_absolute_url())
+
+
+def schedule_inspection(item, when, address, note, by):
+    item.status = 'scheduled'
+    item.inspection_at = when
+    item.inspection_address = address
+    item.seller_note = note
+    item.save()
+    local = timezone.localtime(when).strftime('%a %d %b, %I:%M %p')
+    _notify(item.order.user, by, 'inspection', f'Inspection for {item.title} set for {local}', item.order.get_absolute_url())
+
+
+@transaction.atomic
+def complete_sale(item, by):
+    item.status = 'completed'
+    item.completed_at = timezone.now()
+    item.save()
+    if item.car:
+        item.car.status = 'sold'
+        item.car.save(update_fields=['status', 'updated_at'])
+    _notify(item.order.user, by, 'completed', f'Purchase of {item.title} completed — enjoy your car!', item.order.get_absolute_url())
+
+
+@transaction.atomic
+def cancel_reservation(item, by, role, reason=''):
+    """Cancel an active reservation, release the car and refund the deposit."""
+    from . import payments
+    item.status = 'cancelled'
+    item.cancelled_by = role
+    item.cancel_reason = reason
+    if item.order.provider == 'demo':
+        item.refund_status = 'refunded'
+    else:
+        item.refund_status = 'refunded' if payments.refund(item.order.payment_reference, item.deposit) else 'requested'
+    item.save()
+    if item.car and item.car.status == 'reserved':
+        item.car.status = 'available'
+        item.car.save(update_fields=['status', 'updated_at'])
+    other = item.seller if role == 'buyer' else item.order.user
+    link = reverse('cars:sales') if role == 'buyer' else item.order.get_absolute_url()
+    _notify(other, by, 'cancelled', f'Reservation for {item.title} was cancelled', link)
+
+
+# ----- price insight -----
+
+YEARLY_DEPRECIATION = Decimal('0.07')
+INSIGHT_LEVELS = [  # (max % vs market, key, label)
+    (Decimal('-8'), 'great', 'Great price'),
+    (Decimal('-3'), 'good', 'Good price'),
+    (Decimal('8'), 'fair', 'Fair price'),
+    (None, 'high', 'Above market'),
+]
+
+
+def annotate_insights(cars):
+    """Attach `car.insight` (level, label, pct, market, low, high) by comparing each car with listings of the
+    same make & model, normalising their prices to the car's model year. Needs at least two comparables."""
+    cars = [c for c in cars if c is not None]
+    if not cars:
+        return cars
+    from django.db.models import Q
+    query = Q()
+    for brand, model in {(c.brand, c.model) for c in cars}:
+        query |= Q(brand=brand, model=model)
+    pool = list(Car.objects.public().filter(query).values_list('pk', 'brand', 'model', 'year', 'price'))
+    for car in cars:
+        comps = [price * (1 + YEARLY_DEPRECIATION) ** (car.year - year)
+                 for pk, brand, model, year, price in pool
+                 if pk != car.pk and brand == car.brand and model == car.model]
+        car.insight = None
+        if len(comps) < 2:
+            continue
+        market = sum(comps) / len(comps)
+        pct = (car.price - market) / market * 100
+        level, label = next((key, text) for limit, key, text in INSIGHT_LEVELS if limit is None or pct <= limit)
+        car.insight = {
+            'level': level, 'label': label, 'pct': round(float(pct)), 'market': market,
+            'low': min(comps + [car.price]), 'high': max(comps + [car.price]), 'count': len(comps),
+        }
+        span = car.insight['high'] - car.insight['low']
+        car.insight['position'] = round(float((car.price - car.insight['low']) / span * 100)) if span else 50
+    return cars

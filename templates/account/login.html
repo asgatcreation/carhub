@@ -4,12 +4,9 @@
 <h1>Welcome back</h1>
 <p class="muted">Sign in to reserve cars, message sellers and manage your listings.</p>
 
-{% if SOCIAL_LOGIN_ENABLED %}
-  <a class="btn btn-block btn-lg" href="/accounts/google/login/?process=login{% if redirect_field_value %}&next={{ redirect_field_value|urlencode }}{% endif %}">{% icon 'google' 20 %} Continue with Google</a>
-  <div class="auth-divider">or sign in with email</div>
-{% endif %}
+{% include 'partials/google_button.html' with label='Continue with Google' divider='or sign in with email' %}
 
-<form method="post" action="{% url 'account_login' %}" novalidate id="login-form">
+<form method="post" action="{% url 'account_login' %}" novalidate id="login-form" data-busy>
   {% csrf_token %}
   {% if form.non_field_errors %}<div class="notice danger mb-2">{% icon 'alert' 18 %}<div>{{ form.non_field_errors|join:' ' }}</div></div>{% endif %}
   <div class="field {% if form.login.errors %}has-error{% endif %}">

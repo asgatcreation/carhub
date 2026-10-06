@@ -7,4 +7,5 @@ def notifications_processor(request):
     return {
         'notifications_unread_count': user.notifications.filter(unread=True).count(),
         'messages_unread_count': Message.objects.filter(conversation__participants=user, read=False).exclude(sender=user).count(),
+        'active_reservations_count': user.sales.filter(status__in=['reserved', 'scheduled']).count(),
     }

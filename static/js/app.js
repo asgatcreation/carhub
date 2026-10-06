@@ -17,7 +17,11 @@
     });
     let json = {};
     try { json = await resp.json(); } catch (_) { /* non-JSON error page */ }
-    if (!resp.ok) throw new Error(json.error || 'Something went wrong. Please try again.');
+    if (!resp.ok) {
+      const err = new Error(json.error || 'Something went wrong. Please try again.');
+      if (json.auth_required) err.loginUrl = json.login_url;
+      throw err;
+    }
     return json;
   }
 
@@ -90,6 +94,7 @@
         toast(res.message, { action: { href: window.CARHUB.cartUrl, label: 'View cart' } });
         $$('[data-in-cart-label]').forEach((el) => { el.textContent = 'In your cart'; });
       } catch (err) {
+        if (err.loginUrl) { window.location = err.loginUrl; return; }
         toast(err.message, { error: true });
       } finally {
         btn.disabled = false;
@@ -299,6 +304,7 @@
       else { await navigator.clipboard.writeText(data.url); toast('Link copied to clipboard'); }
     } catch (_) { /* user cancelled */ }
   }));
+  $$('select[data-autosubmit]').forEach((sel) => sel.addEventListener('change', () => sel.form.submit()));
 
   /* ---------- Listing form: photo previews ---------- */
   $$('[data-dropzone]').forEach((zone) => {
@@ -406,6 +412,256 @@
       }
     });
   }
+
+
+  /* ---------- Theme toggle (light / dark), remembered per device ---------- */
+  $$('[data-theme-toggle]').forEach((btn) => btn.addEventListener('click', () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('carhub-theme', next); } catch (_) { /* private mode */ }
+  }));
+
+  /* ---------- Fade images in once loaded (shimmer placeholder until then) ---------- */
+  const markLoaded = (img) => img.classList.add('is-loaded');
+  $$('.car-media img, .gallery-main img, .line-item .thumb img').forEach((img) => {
+    if (img.complete && img.naturalWidth) markLoaded(img);
+    else {
+      img.addEventListener('load', () => markLoaded(img), { once: true });
+      img.addEventListener('error', () => markLoaded(img), { once: true });
+    }
+  });
+
+  /* ---------- Header shadow on scroll ---------- */
+  const header = $('.site-header');
+  if (header) {
+    const onScroll = () => header.classList.toggle('is-scrolled', window.scrollY > 8);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  }
+
+  /* ---------- Reveal sections as they scroll into view ---------- */
+  const revealables = $$('[data-reveal]');
+  if ('IntersectionObserver' in window && revealables.length) {
+    const io = new IntersectionObserver((entries) => entries.forEach((entry) => {
+      if (entry.isIntersecting) { entry.target.classList.add('is-visible'); io.unobserve(entry.target); }
+    }), { rootMargin: '0px 0px -8% 0px' });
+    revealables.forEach((el) => io.observe(el));
+  } else {
+    revealables.forEach((el) => el.classList.add('is-visible'));
+  }
+
+  /* ---------- Count-up numbers ---------- */
+  $$('[data-count-to]').forEach((el) => {
+    const target = Number(el.dataset.countTo);
+    if (!target || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const start = performance.now();
+    const tick = (now) => {
+      const p = Math.min(1, (now - start) / 900);
+      el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))).toLocaleString();
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+
+  /* ---------- Moderation: reason chips + approve/reject without reloading ---------- */
+  document.addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-reason]');
+    if (!chip) return;
+    const input = chip.closest('form').querySelector('[name=reason]');
+    input.value = chip.dataset.reason;
+    input.focus();
+  });
+  $$('form[data-moderate]').forEach((form) => form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const decision = e.submitter && e.submitter.value;
+    const reason = form.querySelector('[name=reason]');
+    if (decision === 'reject' && !reason.value.trim()) {
+      reason.focus();
+      toast('Add a short reason so the seller knows what to fix.', { error: true });
+      return;
+    }
+    try {
+      await post(form.action, { decision, reason: reason.value });
+      const card = form.closest('.mod-card');
+      card.classList.add('is-done');
+      setTimeout(() => card.remove(), 300);
+      const counter = $(`[data-mod-count="${decision === 'approve' ? 'approved' : 'rejected'}"]`);
+      const pending = $('[data-mod-count="pending"]');
+      if (counter) counter.textContent = Number(counter.textContent) + 1;
+      if (pending) pending.textContent = Math.max(0, Number(pending.textContent) - 1);
+      toast(decision === 'approve' ? 'Listing approved and seller notified' : 'Listing rejected and seller notified');
+    } catch (err) {
+      toast(err.message, { error: true });
+    }
+  }));
+
+  /* ---------- One-time code boxes: one real input drawn as six cells ---------- */
+  $$('[data-otp]').forEach((wrap) => {
+    const input = $('.otp-input', wrap);
+    const cells = $$('.otp-cells span:not(.gap)', wrap);
+    const form = wrap.closest('form');
+    const paint = () => {
+      const v = input.value;
+      cells.forEach((cell, i) => {
+        cell.textContent = v[i] || '';
+        cell.classList.toggle('is-filled', Boolean(v[i]));
+        cell.classList.toggle('is-active', document.activeElement === input && (i === v.length || (v.length === cells.length && i === cells.length - 1)));
+      });
+    };
+    input.addEventListener('input', () => {
+      input.value = input.value.replace(/\D/g, '').slice(0, cells.length);
+      wrap.classList.remove('has-error');
+      paint();
+      if (input.value.length === cells.length && form && !form.dataset.autoSubmitted) {
+        form.dataset.autoSubmitted = '1';
+        setTimeout(() => form.requestSubmit(), 120);
+      }
+    });
+    ['focus', 'blur', 'keyup', 'click'].forEach((ev) => input.addEventListener(ev, paint));
+    paint();
+  });
+
+  /* ---------- "Resend code" cooldown ---------- */
+  $$('[data-resend-wait]').forEach((btn) => {
+    let left = Number(btn.dataset.resendWait);
+    const label = btn.textContent;
+    const tick = () => {
+      if (left <= 0) { btn.disabled = false; btn.textContent = label; return; }
+      btn.disabled = true;
+      btn.textContent = `${label} in 0:${String(left).padStart(2, '0')}`;
+      left -= 1;
+      setTimeout(tick, 1000);
+    };
+    tick();
+  });
+
+  /* ---------- Toggle a hidden panel ---------- */
+  $$('[data-toggle-target]').forEach((btn) => btn.addEventListener('click', () => {
+    const el = $(btn.dataset.toggleTarget);
+    if (!el) return;
+    el.hidden = !el.hidden;
+    if (!el.hidden) { const f = $('input:not([type=hidden])', el); if (f) f.focus(); }
+  }));
+
+  /* ---------- Password fields: show/hide + strength meter ---------- */
+  $$('.auth-card input[type=password]').forEach((input) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'pw-wrap';
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pw-toggle';
+    btn.setAttribute('aria-label', 'Show password');
+    btn.innerHTML = '<svg class="icon" width="18" height="18"><use href="#i-eye"></use></svg>';
+    btn.addEventListener('click', () => {
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+      btn.classList.toggle('is-on', show);
+    });
+    wrap.appendChild(btn);
+  });
+  $$('input[name=password1]').forEach((input) => {
+    const field = input.closest('.field');
+    let meter = field && $('.strength', field);
+    if (!meter && field) {
+      meter = document.createElement('div');
+      meter.className = 'strength';
+      meter.innerHTML = '<i></i><i></i><i></i><i></i>';
+      input.closest('.pw-wrap').after(meter);
+    }
+    if (!meter) return;
+    const words = ['Too short', 'Weak', 'Okay', 'Good', 'Strong'];
+    const label = $('[data-strength-label]', field);
+    input.addEventListener('input', () => {
+      const v = input.value;
+      let score = 0;
+      if (v.length >= 8) score += 1;
+      if (v.length >= 12) score += 1;
+      if (/[a-z]/.test(v) && /[A-Z]/.test(v)) score += 1;
+      if (/\d/.test(v) && /[^A-Za-z0-9]/.test(v)) score += 1;
+      if (v.length < 8) score = Math.min(score, 0);
+      meter.dataset.score = v ? score : '';
+      if (label) label.textContent = v ? `${words[score]} password` : 'At least 8 characters. Mix letters, numbers and symbols.';
+    });
+  });
+
+  /* ---------- Show progress on submit and block double submits ---------- */
+  $$('form[data-busy]').forEach((form) => form.addEventListener('submit', (e) => {
+    if (e.defaultPrevented) return;
+    const btn = e.submitter || $('button[type=submit], button:not([type])', form);
+    if (form.dataset.busy === 'on') { e.preventDefault(); return; }
+    form.dataset.busy = 'on';
+    if (btn) { btn.classList.add('is-loading'); btn.setAttribute('aria-busy', 'true'); }
+  }));
+  window.addEventListener('pageshow', () => $$('form[data-busy]').forEach((f) => {
+    f.dataset.busy = '';
+    delete f.dataset.autoSubmitted;
+    $$('.is-loading', f).forEach((b) => b.classList.remove('is-loading'));
+  }));
+
+  /* ---------- Hero: featured-car spotlight + rotating headline word ---------- */
+  const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  $$('[data-spotlight]').forEach((stage) => {
+    const slides = $$('.stage-slide', stage);
+    const thumbs = $$('.stage-thumbs button', stage);
+    if (slides.length < 2) return;
+    let index = 0;
+    let timer = null;
+    const DURATION = 5500;
+    const show = (i) => {
+      index = (i + slides.length) % slides.length;
+      slides.forEach((s, n) => {
+        const on = n === index;
+        s.classList.toggle('is-active', on);
+        s.toggleAttribute('aria-hidden', !on);
+        s.tabIndex = on ? 0 : -1;
+      });
+      thumbs.forEach((t, n) => { t.classList.toggle('is-active', n === index); t.setAttribute('aria-selected', n === index); });
+      stage.classList.remove('is-ticking');
+      void stage.offsetWidth;  // restart the progress bar animation
+      if (timer) stage.classList.add('is-ticking');
+    };
+    const start = () => {
+      if (calm || timer) return;
+      timer = setInterval(() => show(index + 1), DURATION);
+      stage.style.setProperty('--tick', `${DURATION}ms`);
+      stage.classList.add('is-ticking');
+    };
+    const stop = () => { clearInterval(timer); timer = null; stage.classList.remove('is-ticking'); };
+    thumbs.forEach((t) => t.addEventListener('click', () => { stop(); show(Number(t.dataset.slide)); start(); }));
+    stage.addEventListener('mouseenter', stop);
+    stage.addEventListener('mouseleave', start);
+    stage.addEventListener('focusin', stop);
+    let touchX = null;
+    stage.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; }, { passive: true });
+    stage.addEventListener('touchend', (e) => {
+      if (touchX === null) return;
+      const dx = e.changedTouches[0].clientX - touchX;
+      if (Math.abs(dx) > 40) { stop(); show(index + (dx < 0 ? 1 : -1)); start(); }
+      touchX = null;
+    });
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(([entry]) => (entry.isIntersecting ? start() : stop())).observe(stage);
+    } else start();
+    document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
+  });
+
+  $$('[data-rotate]').forEach((el) => {
+    const words = el.dataset.rotate.split(',');
+    const span = $('span', el);
+    if (calm || !span) return;
+    let i = 0;
+    setInterval(() => {
+      span.classList.add('is-out');
+      setTimeout(() => {
+        i = (i + 1) % words.length;
+        span.textContent = words[i];
+        span.classList.remove('is-out');
+      }, 320);
+    }, 2600);
+  });
 
   /* ---------- Confirm dangerous actions ---------- */
   document.addEventListener('submit', (e) => {

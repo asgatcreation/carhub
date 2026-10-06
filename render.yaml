@@ -26,3 +26,15 @@ services:
         sync: false
       - key: PAYSTACK_PUBLIC_KEY
         sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      # Email for one-time codes and order updates (Gmail address + 16-character app password).
+      # If Render blocks SMTP on your plan, set BREVO_API_KEY instead.
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false

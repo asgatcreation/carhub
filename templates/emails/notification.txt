@@ -1,0 +1,9 @@
+{% autoescape off %}{{ heading }}
+
+{{ body }}
+{% if cta_url %}
+{{ cta_label }}: {{ cta_url }}
+{% endif %}
+--
+CarHub · Nigeria's marketplace for verified cars
+{{ site_url }}{% endautoescape %}

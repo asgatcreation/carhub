@@ -14,18 +14,28 @@ def home(request):
     public = Car.objects.public().select_related('created_by__profile').prefetch_related('images')
     body_counts = dict(public.values_list('body_type').annotate(n=Count('id')))
     body_from = dict(public.values_list('body_type').annotate(p=Min('price')))
+    featured = list(public.filter(featured=True).order_by('?')[:8])
+    latest = list(public.order_by('-created_at')[:8])
+    recent = services.recently_viewed(request, limit=4)
+    services.annotate_insights(featured + latest + recent)
+    deals = [c for c in services.annotate_insights(list(public.filter(status='available')))
+             if c.insight and c.insight['level'] in ('great', 'good')]
+    deals.sort(key=lambda c: c.insight['pct'])
     return render(request, 'core/home.html', {
-        'featured': public.filter(featured=True).order_by('?')[:8],
-        'latest': public.order_by('-created_at')[:8],
+        'featured': featured,
+        'spotlight': [c for c in featured if c.primary_image][:4],
+        'latest': latest,
+        'deals': deals[:4],
         'body_types': [(key, label, body_counts.get(key, 0), body_from.get(key)) for key, label in BODY_TYPE_CHOICES
                        if body_counts.get(key)],
         'brands': public.values('brand').annotate(n=Count('id')).order_by('-n')[:12],
+        'all_brands': public.values('brand').annotate(n=Count('id')).order_by('brand'),
         'stats': {
             'listings': public.count(),
             'sellers': Profile.objects.filter(is_verified=True).count(),
             'states': public.values('state').distinct().count(),
         },
-        'recent': services.recently_viewed(request, limit=4),
+        'recent': recent,
         'saved_ids': set(services.wishlist_car_ids(request)),
     })
 
