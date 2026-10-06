@@ -1,4 +1,5 @@
 # CarHub — car marketplace for Nigeria
+n[![CI](https://github.com/asgatcreation/carhub/actions/workflows/ci.yml/badge.svg)](https://github.com/asgatcreation/carhub/actions/workflows/ci.yml)
 
 A full-stack e-commerce marketplace where buyers browse verified listings, chat with sellers and **reserve a car online with a refundable deposit**, then pay the balance after an in-person inspection. Sellers list cars in minutes, verified dealers go live instantly, and a moderation queue keeps the catalogue clean.
 
