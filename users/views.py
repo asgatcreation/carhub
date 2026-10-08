@@ -15,11 +15,29 @@ from .models import Application, Conversation, Message, Notification
 
 @login_required
 def dashboard(request):
+    from cas.models import OrderItem as PartItem
+    from driverzone.models import Trip
     user = request.user
     listings = Car.objects.by_seller(user)
+    trips = user.trips.select_related('driver__user')
+    happening = []
+    active_trip = trips.filter(status__in=Trip.ACTIVE, scheduled_for__isnull=True).first()
+    if active_trip:
+        happening.append(('steering', active_trip.get_status_display(),
+                          f'{active_trip.pickup_address} → {active_trip.dropoff_address or "your car"}',
+                          active_trip.get_absolute_url(), 'Track live'))
+    for t in trips.filter(status='accepted', scheduled_for__gt=timezone.now())[:2]:
+        happening.append(('calendar', f'{t.get_kind_display()} booked',
+                          f'{timezone.localtime(t.scheduled_for):%a %d %b, %I:%M %p}' + (f' · {t.driver.name}' if t.driver else ''),
+                          t.get_absolute_url(), 'View'))
+    for item in PartItem.objects.filter(order__user=user, status='shipped').select_related('order')[:3]:
+        happening.append(('truck', f'{item.name} is on the way', f'With {item.courier}' if item.courier else 'Shipped',
+                          item.order.get_absolute_url(), 'Track'))
     return render(request, 'users/dashboard.html', {
-        'recent_orders': user.orders.prefetch_related('items')[:3],
-        'order_count': user.orders.count(),
+        'recent_orders': user.orders.exclude(status='failed').prefetch_related('items')[:3],
+        'order_count': user.orders.exclude(status='failed').count(),
+        'parts_count': user.parts_orders.exclude(status='failed').count(),
+        'trip_count': trips.filter(status='completed').count(),
         'saved_count': user.wishlist_items.count(),
         'listing_stats': {
             'live': listings.filter(approval_status='approved', status='available').count(),
@@ -29,6 +47,8 @@ def dashboard(request):
         'unread_messages': Message.objects.filter(conversation__participants=user, read=False).exclude(sender=user).count(),
         'recent_notifications': user.notifications.all()[:5],
         'application': Application.objects.filter(user=user, role='car_seller').order_by('-applied_at').first(),
+        'happening': happening[:5],
+        'is_driver': bool(getattr(user, 'driver_profile', None) and user.driver_profile.license_verified),
     })
 
 

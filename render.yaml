@@ -8,7 +8,7 @@ services:
     plan: free
     buildCommand: ./build.sh
     startCommand: python manage.py migrate --noinput && python manage.py seed_demo --if-empty && python manage.py ensure_admin && daphne -b 0.0.0.0 -p $PORT config.asgi:application
-    healthCheckPath: /
+    healthCheckPath: /healthz/
     envVars:
       - key: PYTHON_VERSION
         value: 3.13.5

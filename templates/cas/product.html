@@ -1,5 +1,9 @@
 {% extends 'base.html' %}
 {% block title %}{% if p.brand %}{{ p.brand.name }} {% endif %}{{ p.name }} | CarHub parts{% endblock %}
+{% block og_type %}product{% endblock %}
+{% block og_title %}{% if p.brand %}{{ p.brand.name }} {% endif %}{{ p.name }}: {{ p.price|naira }}{% endblock %}
+{% block og_description %}{{ p.short_description|default:p.description|truncatechars:150 }}{% endblock %}
+{% block og_image %}{{ p.primary_image|absolutize:request }}{% endblock %}
 {% block head %}
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"{{ p.name|escapejs }}","sku":"{{ p.sku|escapejs }}",{% if p.brand %}"brand":{"@type":"Brand","name":"{{ p.brand.name|escapejs }}"},{% endif %}"image":"{{ p.primary_image|escapejs }}","offers":{"@type":"Offer","priceCurrency":"NGN","price":"{{ p.price }}","availability":"https://schema.org/{% if p.in_stock %}InStock{% else %}OutOfStock{% endif %}"}{% if p.rating_count %},"aggregateRating":{"@type":"AggregateRating","ratingValue":"{{ p.rating_avg }}","reviewCount":"{{ p.rating_count }}"}{% endif %}}</script>
 {% endblock %}

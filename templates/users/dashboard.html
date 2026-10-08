@@ -4,7 +4,7 @@
 <div class="row between row-wrap mb-3">
   <div>
     <h2 class="mb-0">Welcome back{% if user.first_name %}, {{ user.first_name }}{% endif %} 👋</h2>
-    <p class="muted mb-0">Here's what's happening with your cars.</p>
+    <p class="muted mb-0">Your cars, parts and rides in one place.</p>
   </div>
   <a href="{% url 'cars:listing_create' %}" class="btn btn-dark">{% icon 'plus' 18 %} List a car</a>
 </div>
@@ -19,16 +19,40 @@
   <div class="notice success mb-3">{% icon 'verified' 20 %}<div><strong>You're a verified seller.</strong> Your listings go live as soon as you publish them.</div></div>
 {% endif %}
 
-<div class="grid grid-4 mb-3">
-  <a class="card stat-card" href="{% url 'cars:orders' %}"><span class="icon-wrap">{% icon 'receipt' 20 %}</span><strong>{{ order_count }}</strong><span>Orders</span></a>
+{% if happening %}
+<section class="card happening mb-3">
+  <div class="card-head"><h3><span class="dz-dot"></span>Happening now</h3></div>
+  {% for icon_name, title, sub, link, cta in happening %}
+    <a class="list-item" href="{{ link }}">
+      <span class="happening-icon">{% icon icon_name 18 %}</span>
+      <div class="grow" style="min-width:0"><strong class="ink">{{ title }}</strong><div class="xs muted truncate">{{ sub }}</div></div>
+      <span class="btn btn-sm">{{ cta }}</span>
+    </a>
+  {% endfor %}
+</section>
+{% endif %}
+
+<div class="dash-stats mb-3">
+  <a class="card stat-card" href="{% url 'cars:orders' %}"><span class="icon-wrap">{% icon 'receipt' 20 %}</span><strong>{{ order_count }}</strong><span>Car reservations</span></a>
+  <a class="card stat-card" href="{% url 'cas:orders' %}"><span class="icon-wrap">{% icon 'box' 20 %}</span><strong>{{ parts_count }}</strong><span>Parts orders</span></a>
+  <a class="card stat-card" href="{% url 'driverzone:trips' %}"><span class="icon-wrap">{% icon 'steering' 20 %}</span><strong>{{ trip_count }}</strong><span>Trips taken</span></a>
   <a class="card stat-card" href="{% url 'cars:saved' %}"><span class="icon-wrap">{% icon 'heart' 20 %}</span><strong>{{ saved_count }}</strong><span>Saved cars</span></a>
   <a class="card stat-card" href="{% url 'users:inbox' %}"><span class="icon-wrap">{% icon 'message' 20 %}</span><strong>{{ unread_messages }}</strong><span>Unread messages</span></a>
   <a class="card stat-card" href="{% url 'cars:my_listings' %}"><span class="icon-wrap">{% icon 'car' 20 %}</span><strong>{{ listing_stats.live }}</strong><span>Live listings{% if listing_stats.pending %} · {{ listing_stats.pending }} in review{% endif %}</span></a>
 </div>
 
+<div class="quick-actions mb-3">
+  <a href="{% url 'cars:browse' %}">{% icon 'search' 18 %}<span>Find a car</span></a>
+  <a href="{% url 'cas:shop' %}">{% icon 'wrench' 18 %}<span>Shop parts</span></a>
+  <a href="{% url 'driverzone:home' %}">{% icon 'pin' 18 %}<span>Book a ride</span></a>
+  {% if user.profile.is_cas_seller_approved %}<a href="{% url 'cas:vendor' %}">{% icon 'box' 18 %}<span>Vendor dashboard</span></a>{% endif %}
+  {% if is_driver %}<a href="{% url 'driverzone:dashboard' %}">{% icon 'steering' 18 %}<span>Driver app</span></a>{% endif %}
+  {% if user.is_staff %}<a href="{% url 'staff:overview' %}">{% icon 'moderation' 18 %}<span>Admin console</span></a>{% endif %}
+</div>
+
 <div class="grid grid-2">
   <section class="card">
-    <div class="card-head"><h3>Recent orders</h3><a href="{% url 'cars:orders' %}" class="link small">View all</a></div>
+    <div class="card-head"><h3>Car reservations</h3><a href="{% url 'cars:orders' %}" class="link small">View all</a></div>
     {% for order in recent_orders %}
       <a class="list-item" href="{{ order.get_absolute_url }}">
         {% with item=order.items.all.0 %}<img src="{{ item.image_url }}" alt="" style="width:64px;height:46px;border-radius:8px;object-fit:cover" referrerpolicy="no-referrer">

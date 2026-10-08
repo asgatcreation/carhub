@@ -12,9 +12,10 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
+from core.ratelimit import rate_limit
 from users.models import Application
 
-from . import services
+from . import realtime, services
 from .forms import BookingForm, DriverApplicationForm, RatingForm
 from .models import DriverProfile, Trip, TripRating
 
@@ -50,6 +51,7 @@ def home(request):
 
 
 @require_GET
+@rate_limit('dz-quote', 40)
 def api_quote(request):
     try:
         pickup = (float(request.GET['plat']), float(request.GET['plng']))
@@ -70,6 +72,7 @@ def api_quote(request):
 
 
 @require_GET
+@rate_limit('dz-nearby', 40)
 def api_nearby(request):
     try:
         lat, lng = float(request.GET['lat']), float(request.GET['lng'])
@@ -82,6 +85,7 @@ def api_nearby(request):
 
 @login_required
 @require_POST
+@rate_limit('dz-book', 6)
 def book(request):
     if request.user.trips.filter(status__in=Trip.ACTIVE, scheduled_for__isnull=True).exists():
         msg = 'You already have a trip in progress.'
@@ -118,7 +122,7 @@ def trip(request, number):
         'trip': t, 'is_driver': is_driver, 'rating_form': RatingForm(),
         'compliments': RatingForm.COMPLIMENTS, 'cancel_fee': services.CANCEL_FEE_AFTER_ARRIVAL,
         'trip_json': json.dumps({
-            'liveUrl': reverse('driverzone:api_live', args=[t.number]), 'status': t.status,
+            'liveUrl': reverse('driverzone:api_live', args=[t.number]), 'number': t.number, 'status': t.status,
             'pickup': [t.pickup_lat, t.pickup_lng], 'dropoff': [t.dropoff_lat, t.dropoff_lng] if t.dropoff_lat is not None else None,
             'route': t.route, 'approach': t.approach_route,
         }),
@@ -146,6 +150,7 @@ def trip_cancel(request, number):
 
 @login_required
 @require_POST
+@rate_limit('dz-rate', 10)
 def trip_rate(request, number):
     t, _ = _trip_for(request, number)
     if t.rider_id != request.user.id or t.status != 'completed' or hasattr(t, 'rating'):
@@ -256,27 +261,13 @@ def dashboard(request):
 @driver_required
 @require_GET
 def api_driver_state(request):
-    """The driver app polls this: current offer or active trip, with the live state."""
-    d = request.driver
-    t = (d.trips.filter(status__in=Trip.ACTIVE).filter(scheduled_for__isnull=True) |
-         d.trips.filter(status__in=Trip.ACTIVE, scheduled_for__lte=timezone.now() + timezone.timedelta(minutes=45))
-         ).select_related('rider__profile').order_by('created_at').first()
-    payload = {'online': d.is_online, 'trip': None}
-    if t:
-        payload['trip'] = {
-            'number': t.number, 'status': t.status, 'kind': t.get_kind_display(), 'fare': _money(t.fare_estimate),
-            'pickup': {'address': t.pickup_address, 'lat': t.pickup_lat, 'lng': t.pickup_lng},
-            'dropoff': {'address': t.dropoff_address, 'lat': t.dropoff_lat, 'lng': t.dropoff_lng} if t.dropoff_lat is not None else None,
-            'rider': t.rider.first_name or 'Rider', 'rider_phone': t.rider.profile.phone, 'notes': t.notes,
-            'distance_km': t.distance_km, 'duration_min': t.duration_min, 'hours': t.hours,
-            'route': t.route, 'action_url': reverse('driverzone:driver_action', args=[t.number]),
-            'pickup_m': int(services.haversine_m(d.lat, d.lng, t.pickup_lat, t.pickup_lng)) if d.lat is not None else None,
-        }
-    return JsonResponse(payload)
+    """The driver app polls this (or receives it over WebSocket): current offer or active trip."""
+    return JsonResponse(services.driver_state(request.driver))
 
 
 @driver_required
 @require_POST
+@rate_limit('dz-gps', 120)
 def api_driver_location(request):
     d = request.driver
     try:
@@ -287,7 +278,17 @@ def api_driver_location(request):
     d.lat, d.lng, d.heading, d.location_updated_at = lat, lng, heading, timezone.now()
     d.is_simulated = False  # a real phone is reporting: stop simulating this driver
     d.save(update_fields=['lat', 'lng', 'heading', 'location_updated_at', 'is_simulated'])
+    _broadcast_position(d)
     return JsonResponse({'ok': True})
+
+
+def _broadcast_position(d):
+    """Push a real driver's new GPS fix to the rider watching their active trip (and the ops map)."""
+    trip = d.trips.filter(status__in=('accepted', 'arrived', 'in_progress')).first()
+    if trip:
+        realtime.trip_changed(trip)
+    else:
+        realtime.driver_changed(d.pk)
 
 
 @driver_required
@@ -296,6 +297,7 @@ def api_driver_online(request):
     d = request.driver
     d.is_online = request.POST.get('online') == '1'
     d.save(update_fields=['is_online'])
+    realtime.driver_changed(d.pk)
     return JsonResponse({'ok': True, 'online': d.is_online})
 
 
@@ -309,6 +311,7 @@ def driver_action(request, number):
         services.accept(t)
     elif action == 'decline' and t.status == 'requested':
         services.dispatch(t, exclude={d.pk})
+        realtime.driver_changed(d.pk)
     elif action == 'arrived' and t.status == 'accepted':
         services.mark_arrived(t)
     elif action == 'start' and t.status == 'arrived':

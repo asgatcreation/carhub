@@ -20,7 +20,7 @@
   {% include 'partials/field.html' with field=form.password2 %}
   {% if redirect_field_value %}<input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">{% endif %}
   <button class="btn btn-primary btn-lg btn-block" type="submit">Create account</button>
-  <p class="xs subtle mt-2 mb-0 text-center">By creating an account you agree to CarHub's terms and privacy policy.</p>
+  <p class="xs subtle mt-2 mb-0 text-center">By creating an account you agree to CarHub's <a class="link" href="{% url 'terms' %}">terms</a> and <a class="link" href="{% url 'privacy' %}">privacy policy</a>.</p>
 </form>
 <p class="mt-3 text-center muted">Already have an account? <a class="link" href="{% url 'account_login' %}">Sign in</a></p>
 {% endblock %}

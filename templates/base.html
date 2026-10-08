@@ -18,6 +18,19 @@
   <meta name="theme-color" content="#0f1419">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{% static 'img/pwa/apple-touch-icon.png' %}">
+  <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="CarHub">
+  <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
+  {# Link previews on WhatsApp, X, LinkedIn, Facebook. Pages override the blocks with their own title and photo. #}
+  <meta property="og:site_name" content="CarHub">
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}CarHub: verified cars, parts that fit, and rides in Nigeria{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}Reserve verified cars with a refundable deposit, shop parts that fit your car, and book rides with live tracking.{% endblock %}">
+  <meta property="og:url" content="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
+  <meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'img/og-default.png' %}{% endblock %}">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -44,7 +57,7 @@
     {% endfor %}
   </div>
 
-  <script>window.CARHUB = { suggestUrl: "{% url 'cars:suggest' %}", cartUrl: "{% url 'cars:cart' %}", loginUrl: "{% url 'account_login' %}", authed: {{ user.is_authenticated|yesno:'true,false' }} };</script>
+  <script>window.CARHUB = { suggestUrl: "{% url 'cars:suggest' %}", cartUrl: "{% url 'cars:cart' %}", loginUrl: "{% url 'account_login' %}", authed: {{ user.is_authenticated|yesno:'true,false' }}, notifyUrl: "{% url 'users:notifications' %}" };</script>
   <script src="{% static 'js/app.js' %}" defer></script>
   {% block scripts %}{% endblock %}
 </body>

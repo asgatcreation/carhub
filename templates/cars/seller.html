@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}{{ profile.display_name }} — cars for sale | CarHub{% endblock %}
+{% block og_title %}{{ profile.display_name }}: cars for sale on CarHub{% endblock %}
+{% block og_description %}{{ listing_count }} car{{ listing_count|pluralize }} for sale{% if agg.n %} · rated {{ agg.overall|floatformat:1 }}/5 by {{ agg.n }} buyer{{ agg.n|pluralize }}{% endif %}{% if profile.city %} · {{ profile.city }}{% endif %}.{% endblock %}
 
 {% block content %}
 <section class="seller-hero-v2">

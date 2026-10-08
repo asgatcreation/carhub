@@ -77,3 +77,26 @@ def merge_session_cart(sender, request, user, **kwargs):
     merge_session_into_account(request, user)
     from cas.services import merge_session_into_account as merge_parts
     merge_parts(request, user)
+
+
+@receiver(post_save, sender='users.Notification')
+def push_notification(sender, instance, created, **kwargs):
+    """Send new notifications to the recipient's open tabs over WebSocket (no-op without a channel layer)."""
+    if not created:
+        return
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+    from django.db import transaction
+    layer = get_channel_layer()
+    if layer is None:
+        return
+    payload = {'message': instance.message, 'link': instance.link, 'verb': instance.verb,
+               'unread': instance.user.notifications.filter(unread=True).count()}
+
+    def send():
+        try:
+            async_to_sync(layer.group_send)(f'user_{instance.user_id}', {'type': 'notify.message', 'payload': payload})
+        except Exception:
+            pass
+
+    transaction.on_commit(send)

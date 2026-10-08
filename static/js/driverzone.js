@@ -22,6 +22,27 @@
     return json;
   }
 
+  /* ---------- WebSocket with automatic reconnect; callers fall back to polling while it is down ---------- */
+  function liveSocket(path, { onMessage, onUp, onDown }) {
+    if (!('WebSocket' in window)) { onDown(); return null; }
+    let ws = null;
+    let retry = 1000;
+    let closedByUs = false;
+    const open = () => {
+      ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${path}`);
+      ws.onopen = () => { retry = 1000; onUp(); };
+      ws.onmessage = (e) => { try { onMessage(JSON.parse(e.data)); } catch (_) { /* ignore bad frames */ } };
+      ws.onclose = () => {
+        onDown();
+        if (!closedByUs) setTimeout(open, retry);
+        retry = Math.min(retry * 2, 30000);
+      };
+    };
+    open();
+    return { send: (obj) => ws && ws.readyState === 1 && ws.send(JSON.stringify(obj)), isOpen: () => ws && ws.readyState === 1,
+      close: () => { closedByUs = true; if (ws) ws.close(); } };
+  }
+
   /* ---------- Map with theme-aware tiles ---------- */
   function tiles() {
     // Standard OpenStreetMap tiles (free, attribution required). Dark mode is a CSS filter on the tile pane.
@@ -379,6 +400,7 @@
     const padTL = window.innerWidth > 980 ? [440, 60] : [30, 30];
     map.fitBounds(L.latLngBounds(bounds).pad(0.15), { paddingTopLeft: padTL });
     let car = null;
+    let glideMs = 2200;
     let lastStatus = t.status;
     let followed = false;
     const ring = $('[data-eta-ring]');
@@ -401,7 +423,7 @@
         $('[data-d-plate]').textContent = d.plate;
         if (d.lat != null && !s.scheduled) {
           if (!car) car = L.marker([d.lat, d.lng], { icon: carIcon(d.heading, 'economy', d.live), zIndexOffset: 1000, keyboard: false }).addTo(map);
-          else { car.setIcon(carIcon(d.heading, 'economy', d.live)); glide(car, [d.lat, d.lng]); }
+          else { car.setIcon(carIcon(d.heading, 'economy', d.live)); glide(car, [d.lat, d.lng], glideMs); }
           if (!followed) { followed = true; map.fitBounds(L.latLngBounds([...bounds, [d.lat, d.lng]]).pad(0.1), { paddingTopLeft: padTL }); }
         }
       }
@@ -432,15 +454,24 @@
     };
 
     let timer = null;
+    let live = false;
+    const finished = () => ['completed', 'cancelled', 'no_driver'].includes(lastStatus);
     const poll = async () => {
+      clearTimeout(timer);
+      if (live || finished()) return;
       try {
         const r = await fetch(t.liveUrl, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
         if (r.ok) paint(await r.json());
       } catch (_) { /* retry next tick */ }
-      if (!['completed', 'cancelled', 'no_driver'].includes(lastStatus)) timer = setTimeout(poll, document.hidden ? 8000 : 2500);
+      if (!live && !finished()) timer = setTimeout(poll, document.hidden ? 8000 : 2500);
     };
-    poll();
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) { clearTimeout(timer); poll(); } });
+    const badge = $('[data-live-badge]');
+    liveSocket(`/ws/trips/${t.number}/`, {
+      onMessage: (s) => { glideMs = 950; paint(s); },
+      onUp: () => { live = true; clearTimeout(timer); if (badge) badge.classList.add('is-live'); },
+      onDown: () => { live = false; glideMs = 2200; if (badge) badge.classList.remove('is-live'); poll(); },
+    });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && !live) poll(); });
   }
 
   /* =====================================================================
@@ -455,6 +486,7 @@
     const meMarker = L.marker(start, { icon: carIcon(0, 'economy', true), zIndexOffset: 1000, keyboard: false }).addTo(map);
     const toggle = $('[data-online-toggle]');
     const gpsText = $('[data-gps-text]');
+    let sock = null;
     let watchId = null;
     let firstFix = false;
     let lastSent = 0;
@@ -467,9 +499,10 @@
       if (!firstFix) { firstFix = true; if (!currentTrip) map.setView([lat, lng], 15); }
       gpsText.textContent = `Sharing live location · accuracy ${Math.round(pos.coords.accuracy)} m`;
       $('[data-gps]').classList.add('is-on');
-      if (Date.now() - lastSent < 4000) return;
+      if (Date.now() - lastSent < (sock && sock.isOpen() ? 1500 : 4000)) return;
       lastSent = Date.now();
-      postForm(app.dataset.locationUrl, { lat, lng, heading: heading || '' }).catch(() => {});
+      if (sock && sock.isOpen()) sock.send({ type: 'location', lat, lng, heading: heading || 0 });
+      else postForm(app.dataset.locationUrl, { lat, lng, heading: heading || '' }).catch(() => {});
     };
     const startGps = () => {
       if (!navigator.geolocation) { gpsText.textContent = 'This browser cannot share location.'; return; }
@@ -539,22 +572,28 @@
           if (act === 'cancel' && !window.confirm('Cancel this trip?')) return;
           b.disabled = true;
           try { await postForm(trip.action_url, { action: act }); } catch (err) { window.alert(err.message); }
-          poll();
+          if (!live) poll();
         });
         return b;
       }));
     };
 
     let timer = null;
+    let live = false;
     const poll = async () => {
       clearTimeout(timer);
+      if (live) return;
       try {
         const r = await fetch(app.dataset.stateUrl, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
         if (r.ok) renderJob((await r.json()).trip);
       } catch (_) { /* retry */ }
-      timer = setTimeout(poll, 3000);
+      if (!live) timer = setTimeout(poll, 3000);
     };
-    poll();
+    sock = liveSocket('/ws/driver/', {
+      onMessage: (data) => renderJob(data.trip),
+      onUp: () => { live = true; clearTimeout(timer); $('[data-gps]').dataset.socket = 'on'; },
+      onDown: () => { live = false; $('[data-gps]').dataset.socket = ''; poll(); },
+    });
   }
 
   /* =====================================================================
@@ -596,10 +635,19 @@
       $$('[data-ops-city]').forEach((x) => x.classList.toggle('is-active', x === b));
       map.setView(b.dataset.opsCity === 'Abuja' ? [9.0579, 7.4951] : [6.5244, 3.3792], 11);
     }));
+    let live = false;
+    let timer = null;
     const poll = async () => {
+      clearTimeout(timer);
+      if (live) return;
       try { const r = await fetch(ops.dataset.url, { credentials: 'same-origin' }); if (r.ok) draw(await r.json()); } catch (_) { /* retry */ }
-      setTimeout(poll, 4000);
+      if (!live) timer = setTimeout(poll, 4000);
     };
-    poll();
+    const badge = $('[data-live-badge]');
+    liveSocket('/ws/ops/', {
+      onMessage: draw,
+      onUp: () => { live = true; clearTimeout(timer); if (badge) badge.classList.add('is-live'); },
+      onDown: () => { live = false; if (badge) badge.classList.remove('is-live'); poll(); },
+    });
   }
 })();

@@ -1,0 +1,22 @@
+{
+  "name": "CarHub: cars, parts & rides",
+  "short_name": "CarHub",
+  "description": "Buy verified cars, shop parts that fit your car, and book rides with live tracking in Nigeria.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b0f14",
+  "theme_color": "#0f1419",
+  "orientation": "portrait-primary",
+  "categories": ["shopping", "travel", "lifestyle"],
+  "icons": [
+    {"src": "/static/img/pwa/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/static/img/pwa/icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "/static/img/pwa/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ],
+  "shortcuts": [
+    {"name": "Book a ride", "url": "/drivers/", "icons": [{"src": "/static/img/pwa/icon-192.png", "sizes": "192x192"}]},
+    {"name": "Shop parts", "url": "/accessories/", "icons": [{"src": "/static/img/pwa/icon-192.png", "sizes": "192x192"}]},
+    {"name": "Driver app", "url": "/drivers/driver-app/", "icons": [{"src": "/static/img/pwa/icon-192.png", "sizes": "192x192"}]}
+  ]
+}

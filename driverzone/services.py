@@ -22,6 +22,7 @@ from django.db.models import F
 from django.urls import reverse
 from django.utils import timezone
 
+from . import realtime
 from .models import DriverProfile, Trip
 
 logger = logging.getLogger(__name__)
@@ -207,6 +208,7 @@ def dispatch(trip, exclude=()):
     if not candidates:
         trip.status, trip.driver = 'no_driver', None
         trip.save(update_fields=['status', 'driver'])
+        realtime.trip_changed(trip)
         return None
     meters, driver = candidates[0]
     trip.driver = driver
@@ -214,6 +216,7 @@ def dispatch(trip, exclude=()):
     approach = route(driver.lat, driver.lng, trip.pickup_lat, trip.pickup_lng)
     trip.approach_route, trip.approach_s = approach['coords'], max(120, approach['duration_s'])
     trip.save(update_fields=['driver', 'simulated', 'approach_route', 'approach_s'])
+    realtime.trip_changed(trip)
     if not driver.is_simulated:
         _notify(driver.user, 'trip_request', f'New {trip.get_kind_display().lower()} request from {trip.pickup_address}.',
                 reverse('driverzone:dashboard'), 'New trip request', 'Open driver app')
@@ -223,6 +226,7 @@ def dispatch(trip, exclude=()):
 def accept(trip, when=None):
     trip.status, trip.accepted_at = 'accepted', when or timezone.now()
     trip.save(update_fields=['status', 'accepted_at'])
+    realtime.trip_changed(trip)
     d = trip.driver
     if trip.scheduled_for and trip.scheduled_for > timezone.now():
         when = timezone.localtime(trip.scheduled_for).strftime('%a %d %b at %I:%M %p').replace(' 0', ' ')
@@ -236,17 +240,20 @@ def accept(trip, when=None):
 def mark_arrived(trip, when=None):
     trip.status, trip.arrived_at = 'arrived', when or timezone.now()
     trip.save(update_fields=['status', 'arrived_at'])
+    realtime.trip_changed(trip)
 
 
 def start(trip, when=None):
     trip.status, trip.started_at = 'in_progress', when or timezone.now()
     trip.save(update_fields=['status', 'started_at'])
+    realtime.trip_changed(trip)
 
 
 def complete(trip, when=None):
     trip.status, trip.completed_at = 'completed', when or timezone.now()
     trip.fare_final = trip.fare_estimate
     trip.save(update_fields=['status', 'completed_at', 'fare_final'])
+    realtime.trip_changed(trip)
     if trip.driver:
         DriverProfile.objects.filter(pk=trip.driver_id).update(trips_count=F('trips_count') + 1)
         if trip.dropoff_lat is not None:  # the driver is now where the trip ended
@@ -261,6 +268,7 @@ def cancel(trip, by, reason=''):
     trip.status, trip.cancelled_at, trip.cancelled_by, trip.cancel_reason = 'cancelled', timezone.now(), by, reason[:200]
     trip.fare_final = fee or None
     trip.save(update_fields=['status', 'cancelled_at', 'cancelled_by', 'cancel_reason', 'fare_final'])
+    realtime.trip_changed(trip)
     if by == 'driver':
         _notify(trip.rider, 'trip_cancelled', 'Your driver cancelled. Please book again; you have not been charged.',
                 trip.get_absolute_url(), 'Your trip was cancelled')
@@ -384,3 +392,50 @@ def request_trip(rider, data):
     if driver and trip.scheduled_for:  # scheduled bookings are confirmed with a driver straight away
         accept(trip)
     return trip
+
+
+# ---------------------------------------------------------------- payloads shared by HTTP and WebSocket
+
+def driver_state(d):
+    """What the driver app shows: online flag plus the current offer or active trip."""
+    from django.db.models import Q
+    d.refresh_from_db()
+    soon = timezone.now() + timedelta(minutes=45)
+    t = (d.trips.filter(status__in=Trip.ACTIVE).filter(Q(scheduled_for__isnull=True) | Q(scheduled_for__lte=soon))
+         .select_related('rider__profile').order_by('created_at').first())
+    payload = {'online': d.is_online, 'trip': None}
+    if t:
+        payload['trip'] = {
+            'number': t.number, 'status': t.status, 'kind': t.get_kind_display(), 'fare': f'₦{t.fare_estimate:,.0f}',
+            'pickup': {'address': t.pickup_address, 'lat': t.pickup_lat, 'lng': t.pickup_lng},
+            'dropoff': {'address': t.dropoff_address, 'lat': t.dropoff_lat, 'lng': t.dropoff_lng} if t.dropoff_lat is not None else None,
+            'rider': t.rider.first_name or 'Rider', 'rider_phone': t.rider.profile.phone, 'notes': t.notes,
+            'distance_km': t.distance_km, 'duration_min': t.duration_min, 'hours': t.hours,
+            'route': t.route, 'action_url': reverse('driverzone:driver_action', args=[t.number]),
+            'pickup_m': int(haversine_m(d.lat, d.lng, t.pickup_lat, t.pickup_lng)) if d.lat is not None else None,
+        }
+    return payload
+
+
+def ops_snapshot():
+    """Every online driver and active trip, for the staff live map."""
+    busy = busy_driver_ids()
+    drivers = DriverProfile.objects.filter(is_online=True, lat__isnull=False).select_related('user')
+    trips = []
+    for t in Trip.objects.filter(status__in=Trip.ACTIVE, scheduled_for__isnull=True).select_related('driver__user'):
+        advance_simulation(t)
+        if t.is_active:
+            state = live_state(t) if t.driver else {}
+            pos = (state.get('driver') or {})
+            trips.append({'number': t.number, 'status': t.status, 'url': t.get_absolute_url(),
+                          'pickup': [t.pickup_lat, t.pickup_lng], 'pickup_address': t.pickup_address,
+                          'dropoff': [t.dropoff_lat, t.dropoff_lng] if t.dropoff_lat is not None else None,
+                          'route': t.route[::3], 'driver': t.driver.name if t.driver else '',
+                          'driver_id': t.driver_id, 'car': [pos['lat'], pos['lng'], pos['heading']] if pos.get('lat') else None})
+    on_trip = {t['driver_id']: t['car'] for t in trips if t['car']}
+    return {
+        'drivers': [{'lat': on_trip[d.pk][0] if d.pk in on_trip else d.lat, 'lng': on_trip[d.pk][1] if d.pk in on_trip else d.lng,
+                     'heading': on_trip[d.pk][2] if d.pk in on_trip else d.heading, 'cls': d.vehicle_class,
+                     'busy': d.pk in busy, 'name': d.name, 'vehicle': d.vehicle} for d in drivers],
+        'trips': trips,
+    }

@@ -83,3 +83,47 @@ def page_not_found(request, exception):
 
 def server_error(request):
     return render(request, '500.html', status=500)
+
+
+def terms(request):
+    return render(request, 'core/terms.html')
+
+
+def privacy(request):
+    return render(request, 'core/privacy.html')
+
+
+def offline(request):
+    return render(request, 'core/offline.html')
+
+
+def healthz(request):
+    """Cheap health check for the host: the app is up and the database answers."""
+    from django.db import connection
+    from django.http import HttpResponse
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT 1')
+    except Exception:
+        return HttpResponse('database unavailable', status=503, content_type='text/plain')
+    return HttpResponse('ok', content_type='text/plain')
+
+
+def robots_txt(request):
+    from django.http import HttpResponse
+    lines = ['User-agent: *', 'Disallow: /admin/', 'Disallow: /staff/', 'Disallow: /account/', 'Disallow: /accounts/',
+             'Disallow: /cars/cart/', 'Disallow: /cars/checkout/', 'Disallow: /accessories/cart/',
+             'Disallow: /accessories/checkout/', 'Disallow: /drivers/trips/', 'Disallow: /drivers/api/',
+             f"Sitemap: {request.build_absolute_uri('/sitemap.xml')}"]
+    return HttpResponse('\n'.join(lines) + '\n', content_type='text/plain')
+
+
+def service_worker(request):
+    """Served from the site root so it can control every page (PWA offline support)."""
+    from django.conf import settings
+    from django.http import HttpResponse
+    path = settings.BASE_DIR / 'static' / 'js' / 'sw.js'
+    response = HttpResponse(path.read_text(encoding='utf-8'), content_type='application/javascript')
+    response['Cache-Control'] = 'no-cache'
+    response['Service-Worker-Allowed'] = '/'
+    return response

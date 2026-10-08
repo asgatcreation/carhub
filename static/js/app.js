@@ -786,6 +786,31 @@
     update();
   });
 
+  /* ---------- Live notifications over WebSocket (new order, trip update, message…) ---------- */
+  if (window.CARHUB && window.CARHUB.authed && 'WebSocket' in window && !document.body.classList.contains('console-body')) {
+    let retry = 2000;
+    const connect = () => {
+      const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/notify/`);
+      ws.onopen = () => { retry = 2000; };
+      ws.onmessage = (e) => {
+        let n;
+        try { n = JSON.parse(e.data); } catch (_) { return; }
+        setCount('[data-notif-count]', n.unread);
+        // The trip page already shows its own live status; don't double up with toasts there.
+        if (!document.querySelector('[data-dz-trip]') || !/^trip_/.test(n.verb || '')) {
+          toast(n.message, n.link ? { action: { label: 'View', href: n.link } } : {});
+        }
+      };
+      ws.onclose = () => { setTimeout(connect, retry); retry = Math.min(retry * 2, 60000); };
+    };
+    connect();
+  }
+
+  /* ---------- Installable app: register the service worker (offline page, app icon) ---------- */
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+  }
+
   /* ---------- Confirm dangerous actions ---------- */
   document.addEventListener('submit', (e) => {
     const msg = e.target.dataset.confirm;

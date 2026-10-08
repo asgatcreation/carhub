@@ -39,7 +39,7 @@
           {% icon 'message' 22 %}<span class="count-badge" data-count="{{ messages_unread_count|default:0 }}">{{ messages_unread_count|default:'' }}</span>
         </a>
         <a href="{% url 'users:notifications' %}" class="icon-btn hide-sm" aria-label="Notifications" title="Notifications">
-          {% icon 'bell' 22 %}<span class="count-badge" data-count="{{ notifications_unread_count|default:0 }}">{{ notifications_unread_count|default:'' }}</span>
+          {% icon 'bell' 22 %}<span class="count-badge" data-notif-count data-count="{{ notifications_unread_count|default:0 }}">{{ notifications_unread_count|default:'' }}</span>
         </a>
         <details class="dropdown hide-sm">
           <summary class="icon-btn" aria-label="Account menu">

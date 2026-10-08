@@ -272,3 +272,9 @@
 .dz-car.is-live g { fill: #ffb21e; }
 @media (max-width: 1100px) { .dz-ops-body { grid-template-columns: minmax(0, 1fr); } .dz-ops-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .dz-ops-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dz-ops-map { height: 50vh; } }
+
+/* "Live" indicator: grey while connecting / polling, green when the WebSocket is open */
+.dz-live-badge { display: inline-flex; align-items: center; gap: 5px; margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: .64rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; background: var(--surface-2); color: var(--subtle); vertical-align: 1px; }
+.dz-live-badge i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.dz-live-badge.is-live { background: var(--success-soft); color: var(--success); }
+.dz-live-badge.is-live i { animation: dz-blink 1.2s ease-in-out infinite; }

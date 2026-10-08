@@ -1,6 +1,10 @@
 {% extends 'base.html' %}
 
 {% block title %}{{ car.full_title }} for sale in {{ car.state }} — {{ car.price|naira }} | CarHub{% endblock %}
+{% block og_type %}product{% endblock %}
+{% block og_title %}{{ car.full_title }} for {{ car.price|naira }} | CarHub{% endblock %}
+{% block og_description %}{{ car.get_condition_display }} · {{ car.mileage|km }} · {{ car.location }}, {{ car.state }}. Reserve with a refundable ₦250,000 deposit on CarHub.{% endblock %}
+{% block og_image %}{{ car.primary_image|absolutize:request }}{% endblock %}
 {% block meta_description %}{{ car.full_title }}, {{ car.mileage|km }}, {{ car.get_condition_display|lower }}, {{ car.get_engine_type_display|lower }}. {{ car.price|naira }} in {{ car.location }}, {{ car.state }}.{% endblock %}
 {% block body_class %}has-sticky-buy{% endblock %}
 

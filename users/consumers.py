@@ -63,3 +63,23 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'sender': user.get_full_name() or user.email,
             'time': timezone.localtime(msg.created_at).strftime('%H:%M'),
         }
+
+
+class NotificationConsumer(AsyncWebsocketConsumer):
+    """ws/notify/: pushes each new in-app notification to the recipient instantly (bell badge + toast)."""
+
+    async def connect(self):
+        user = self.scope.get('user')
+        if not (user and user.is_authenticated):
+            await self.close()
+            return
+        self.group_name = f'user_{user.pk}'
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, code):
+        if hasattr(self, 'group_name'):
+            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
+    async def notify_message(self, event):
+        await self.send(text_data=json.dumps(event['payload']))

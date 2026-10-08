@@ -16,6 +16,7 @@ from django.views.decorators.http import require_POST
 
 from cars import payments
 from cars.models import STATE_CHOICES, Car
+from core.ratelimit import rate_limit
 from users.models import Application
 
 from . import services
@@ -195,6 +196,7 @@ def cart(request):
 
 
 @require_POST
+@rate_limit('cas-cart', 60)
 def cart_add(request, product_id):
     p = get_object_or_404(Product.objects.public(), pk=product_id)
     if not p.in_stock:
@@ -328,6 +330,7 @@ def order_item_cancel(request, item_id):
 
 @login_required
 @require_POST
+@rate_limit('cas-review', 5)
 def review_submit(request, slug):
     p = get_object_or_404(Product.objects.public(), slug=slug)
     if request.user == p.vendor:

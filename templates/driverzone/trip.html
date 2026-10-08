@@ -9,7 +9,7 @@
   <aside class="dz-panel dz-trip-panel" aria-live="polite">
     <div class="dz-panel-head">
       <div>
-        <span class="eyebrow">{% icon 'steering' 14 %} {{ trip.get_kind_display }} · {{ trip.number }}</span>
+        <span class="eyebrow">{% icon 'steering' 14 %} {{ trip.get_kind_display }} · {{ trip.number }} <span class="dz-live-badge" data-live-badge title="Instant updates over WebSocket"><i></i>Live</span></span>
         <h1 data-live-label>{% if trip.scheduled_for and trip.status == 'accepted' %}Booking confirmed{% else %}{{ trip.get_status_display }}{% endif %}</h1>
       </div>
       <a class="icon-btn" href="{% url 'driverzone:trips' %}" aria-label="All trips">{% icon 'x' 20 %}</a>

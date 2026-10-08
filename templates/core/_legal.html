@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-head">
+  <div class="container" style="max-width:880px">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="{% url 'home' %}">Home</a>{% icon 'chevron-right' 14 %}<span>{% block legal_title %}{% endblock %}</span></nav>
+    <h1>{% block legal_heading %}{% endblock %}</h1>
+    <p class="muted mb-0">Last updated {% block updated %}8 October 2026{% endblock %}</p>
+  </div>
+</div>
+<div class="container section legal" style="padding-top:28px;max-width:880px">
+  <div class="notice info mb-3">{% icon 'info' 18 %}<div class="small">CarHub is a portfolio project by Akanji Oluwaseun Gabriel. Listings, dealers, drivers and orders are demo data; no real cars, parts or rides are sold and no real payments are taken in demo mode.</div></div>
+  <div class="legal-body">{% block legal_body %}{% endblock %}</div>
+  <p class="muted small mt-4">Questions? <a class="link" href="{% url 'contact' %}">Contact us</a>.</p>
+</div>
+{% endblock %}

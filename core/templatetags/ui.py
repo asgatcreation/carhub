@@ -120,3 +120,10 @@ def fits_garage(product, vehicle):
 @register.filter
 def map_attr(items, attr):
     return [getattr(i, attr) for i in items]
+
+
+@register.filter
+def absolutize(url, request):
+    """Make a site-relative URL absolute (link previews need full URLs)."""
+    url = str(url or '')
+    return request.build_absolute_uri(url) if url.startswith('/') else url

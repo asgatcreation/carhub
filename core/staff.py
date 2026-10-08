@@ -416,21 +416,5 @@ def live_map(request):
 
 @staff_member_required
 def live_data(request):
-    from driverzone import services as dz
-    from driverzone.models import DriverProfile, Trip
-    busy = dz.busy_driver_ids()
-    drivers = DriverProfile.objects.filter(is_online=True, lat__isnull=False).select_related('user')
-    trips = Trip.objects.filter(status__in=Trip.ACTIVE, scheduled_for__isnull=True).select_related('driver__user')
-    payload_trips = []
-    for t in trips:
-        dz.advance_simulation(t)
-        if t.is_active:
-            payload_trips.append({'number': t.number, 'status': t.status, 'url': t.get_absolute_url(),
-                                  'pickup': [t.pickup_lat, t.pickup_lng], 'pickup_address': t.pickup_address,
-                                  'dropoff': [t.dropoff_lat, t.dropoff_lng] if t.dropoff_lat is not None else None,
-                                  'route': t.route[::3], 'driver': t.driver.name if t.driver else ''})
-    return JsonResponse({
-        'drivers': [{'lat': d.lat, 'lng': d.lng, 'heading': d.heading, 'cls': d.vehicle_class, 'busy': d.pk in busy,
-                     'name': d.name, 'vehicle': d.vehicle} for d in drivers],
-        'trips': payload_trips,
-    })
+    from driverzone.services import ops_snapshot
+    return JsonResponse(ops_snapshot())

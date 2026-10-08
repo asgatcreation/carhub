@@ -1,0 +1,42 @@
+{% extends 'core/_legal.html' %}
+{% block title %}Privacy policy | CarHub{% endblock %}
+{% block legal_title %}Privacy policy{% endblock %}
+{% block legal_heading %}Privacy policy{% endblock %}
+{% block legal_body %}
+<p>This policy explains what personal data CarHub collects, why, and your rights under the Nigeria Data Protection Act 2023.</p>
+
+<h2>What we collect</h2>
+<ul>
+  <li><strong>Account details:</strong> name, email, phone number and password (stored as a secure hash). If you sign in with Google we receive your name, email and profile picture from Google, nothing else.</li>
+  <li><strong>Orders and bookings:</strong> delivery or pickup address, inspection preferences, items bought, trip pickup and drop-off points, fares and ratings.</li>
+  <li><strong>Location:</strong> only when you choose "use my location" when booking a ride, and, for drivers, while they are online in the driver app so riders can track their trip. You can turn it off at any time in your browser.</li>
+  <li><strong>Verification documents</strong> from dealers, vendors and drivers (ID, CAC or licence). These are seen only by our moderation team and never shown publicly.</li>
+  <li><strong>Messages</strong> you send to sellers through CarHub chat, kept so either side can refer back to them and so we can investigate reports.</li>
+</ul>
+
+<h2>How we use it</h2>
+<ul>
+  <li>To run your account, reservations, orders and trips, and to send codes, receipts and status updates by email.</li>
+  <li>To verify sellers, vendors and drivers and keep fraud off the platform.</li>
+  <li>To show you parts that fit your car and prices compared with the market.</li>
+</ul>
+<p>We don't sell your data and we don't use it for third-party advertising.</p>
+
+<h2>Who we share it with</h2>
+<ul>
+  <li>The other party to your transaction: a seller sees the name and phone number of a buyer who reserved their car; a vendor sees the delivery details for their order; a driver sees the rider's first name, pickup point and phone number during a trip.</li>
+  <li>Service providers that run parts of CarHub: Paystack (payments), Brevo (email delivery), Google (sign-in), and our hosting provider. Maps use OpenStreetMap, Photon and OSRM; the addresses you search for are sent to those services to find and route them.</li>
+</ul>
+
+<h2>Cookies</h2>
+<p>We use only the cookies needed to keep you signed in, protect forms (CSRF) and remember your cart and theme. There are no advertising or tracking cookies.</p>
+
+<h2>How long we keep it</h2>
+<p>Account data is kept while your account is open. Order, trip and payment records are kept for up to 6 years for accounting and dispute purposes. Verification documents are deleted 12 months after a decision unless you remain an active seller, vendor or driver.</p>
+
+<h2>Your rights</h2>
+<p>You can access, correct or delete your personal data, object to its use, or ask for a copy. Update most details in <a class="link" href="{% url 'users:settings' %}">Account settings</a>, or <a class="link" href="{% url 'contact' %}">contact us</a> for anything else. You can also complain to the Nigeria Data Protection Commission.</p>
+
+<h2>Security</h2>
+<p>Passwords are hashed, the site is served over HTTPS, sign-in and password resets use one-time codes with rate limits, and staff access is restricted to the moderation team.</p>
+{% endblock %}

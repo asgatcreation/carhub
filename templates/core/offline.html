@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}You're offline | CarHub{% endblock %}
+{% block content %}
+<div class="error-page">
+  <div>
+    <div class="code" style="font-size:4rem">{% icon 'road' 64 %}</div>
+    <h1 style="font-size:2rem">You're offline</h1>
+    <p class="muted">Check your connection; CarHub will pick up where you left off as soon as you're back online.</p>
+    <div class="row row-wrap" style="justify-content:center"><button class="btn btn-dark" onclick="location.reload()">Try again</button></div>
+  </div>
+</div>
+{% endblock %}

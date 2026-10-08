@@ -5,7 +5,10 @@ from django.urls import include, path, re_path
 from django.views.static import serve
 from django.views.generic import RedirectView
 
+from django.contrib.sitemaps.views import sitemap
+
 from core import views as core_views
+from core.sitemaps import SITEMAPS
 from users.views_auth import CarHubPasswordResetView
 
 admin.site.site_header = 'CarHub administration'
@@ -16,6 +19,13 @@ urlpatterns = [
     path('', core_views.home, name='home'),
     path('about/', core_views.about, name='about'),
     path('contact/', core_views.contact, name='contact'),
+    path('terms/', core_views.terms, name='terms'),
+    path('privacy/', core_views.privacy, name='privacy'),
+    path('offline/', core_views.offline, name='offline'),
+    path('healthz/', core_views.healthz, name='healthz'),
+    path('robots.txt', core_views.robots_txt, name='robots'),
+    path('sw.js', core_views.service_worker, name='service_worker'),
+    path('sitemap.xml', sitemap, {'sitemaps': SITEMAPS}, name='django.contrib.sitemaps.views.sitemap'),
     path('accessories/', include('cas.urls')),
     path('drivers/', include('driverzone.urls')),
 

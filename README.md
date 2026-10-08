@@ -7,7 +7,7 @@
 [![CI](https://github.com/asgatcreation/carhub/actions/workflows/ci.yml/badge.svg)](https://github.com/asgatcreation/carhub/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.13-3776AB?logo=python&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-5.2-0C4B33?logo=django&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-132%20passing-11845b)
+![Tests](https://img.shields.io/badge/tests-146%20passing-11845b)
 
 **[Live demo →](https://carhub-es73.onrender.com/)** &nbsp;·&nbsp; [Buyer journey](#the-buyer-journey) &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Run it locally](#run-it-locally) &nbsp;·&nbsp; [Architecture](#architecture)
 
@@ -67,7 +67,7 @@ Checkout is paid in full by Paystack, the demo payment, or **pay on delivery** i
 | | |
 | :-- | :-- |
 | <img src="docs/screenshots/21-rides-booking.jpg" alt="Booking a ride on the map"> | <img src="docs/screenshots/22-live-trip.jpg" alt="Live trip tracking"> |
-| **Book on a real map.** Search any address or landmark (Photon geocoding, biased to Nigeria), use your GPS, or drop and drag pins. The route is planned on real roads (OSRM), and each option shows a fare and how many minutes away the nearest driver is. | **Track it live.** The driver's car moves on the map along the road, with a pickup countdown, the driver's name, rating, car and plate, and a call button. Trips go from finding a driver to on the way, arrived, on trip and completed, then you rate the driver and can tip. |
+| **Book on a real map.** Search any address or landmark (Photon geocoding, biased to Nigeria), use your GPS, or drop and drag pins. The route is planned on real roads (OSRM), and each option shows a fare and how many minutes away the nearest driver is. | **Track it live.** Updates arrive instantly over WebSockets: the driver's car glides along the road, with a pickup countdown, the driver's name, rating, car and plate, and a call button. Trips go from finding a driver to on the way, arrived, on trip and completed, then you rate the driver and can tip. |
 
 <img src="docs/screenshots/23-rides-mobile.jpg" alt="Booking, live trip and driver app on mobile" width="100%">
 
@@ -75,6 +75,7 @@ Checkout is paid in full by Paystack, the demo payment, or **pay on delivery** i
 - **Driver app:** drivers go online and share live GPS from their phone's browser, then accept or decline requests (declined trips go to the next nearest driver). Pickup, start and complete are one tap each, with navigation links and today's and the week's earnings.
 - **Dispatch:** the nearest idle, verified driver of the right class gets the trip. Prices are always recomputed on the server from the route, never trusted from the browser.
 - **Demo drivers:** the 16 seeded drivers aren't really driving, so their trips are simulated along the actual road route on a faster clock. The same live map then works end to end; real drivers sharing GPS are tracked for real.
+- **Instant updates:** the trip page, driver app and ops map each hold a WebSocket. Every status change is pushed the moment it's committed, drivers stream GPS over the same socket, and a **Live** badge shows when the connection is up. If it drops, the page reconnects with backoff and falls back to polling, so tracking never stops.
 - **Operations:** a live map in the admin console shows every online driver and active trip. Driver applications are approved in Verifications, which creates the driver's profile with their licence and car.
 
 <img src="docs/screenshots/24-live-ops.jpg" alt="Live rides map in the admin console" width="100%">
@@ -124,7 +125,7 @@ Every screen is designed for a 390px-wide phone first. Car sections become swipe
 **Rides & drivers**
 - Leaflet map with OpenStreetMap tiles (dark-mode aware), Photon address search with keyboard support, "use my location", and draggable pins with reverse geocoding.
 - Server-side routing and pricing (OSRM, with a straight-line fallback if it's unreachable), busy-hour pricing, a minimum fare, and chauffeur hourly or day rates.
-- Live trip page polling a tracking API: the car glides along the route, with an ETA ring and a status tracker; free cancellation until the driver arrives; ratings with compliments and tips.
+- Live trip page pushed over WebSockets (polling as a fallback): the car glides along the route, with an ETA ring and a status tracker; free cancellation until the driver arrives; ratings with compliments and tips.
 - Driver app with an online toggle, browser GPS sharing, accept/decline/arrive/start/complete, and earnings.
 
 **Staff**
@@ -136,19 +137,27 @@ Every screen is designed for a 390px-wide phone first. Car sections become swipe
 - Email and password, or **Continue with Google**. Both lead to the same account: Google signs in an existing email account, and Google-only users can add a password through "Forgot password".
 - Email verification and password reset by one-time code, with security emails on password changes.
 - Sign-out keeps you on the page you were on, or sends you home from private pages.
+- One account overview for everything: car reservations, parts orders, trips, messages, a "happening now" panel (live trip, parts on the way, upcoming chauffeur bookings) and shortcuts to the vendor, driver and admin areas.
+- Live notifications: the bell count and a toast update instantly over a per-user WebSocket.
+
+**Production polish**
+- Installable PWA: web manifest with app shortcuts (Book a ride, Shop parts, Driver app), icons, and a service worker with an offline page.
+- SEO and sharing: `sitemap.xml` (cars, parts, categories, sellers, chauffeurs), `robots.txt`, canonical URLs, and Open Graph / Twitter cards with each car's or part's photo.
+- Terms of service and a privacy policy written for the Nigeria Data Protection Act 2023.
+- Rate limits on booking, quotes, GPS updates, cart and reviews; a `Permissions-Policy` header; and `/healthz/` (checks the database) for Render's health check.
 
 ## Tech stack
 
 | Layer | Choice |
 | --- | --- |
 | Backend | Python 3.12+, Django 5.2, django-allauth (email + Google, one-time codes) |
-| Real-time | Django Channels: one participant-only WebSocket consumer per conversation |
+| Real-time | Django Channels: WebSockets for chat, notifications, trip tracking, the driver app and the ops map; in-memory channel layer, or Redis via `REDIS_URL` |
 | Payments | Paystack: initialise, verify, HMAC-SHA512 webhook, refunds |
 | Email | Branded HTML templates; SMTP (e.g. Gmail app password) or Brevo's HTTP API |
 | Frontend | Server-rendered templates, a hand-written CSS design system (tokens, dark theme), vanilla JS with progressive enhancement |
 | Data | SQLite locally, Postgres via `DATABASE_URL` |
 | Hosting | Render (daphne ASGI), WhiteNoise static files |
-| Quality | 132 automated tests, GitHub Actions CI on Python 3.12 and 3.13 |
+| Quality | 146 automated tests, GitHub Actions CI on Python 3.12 and 3.13 |
 
 ## Architecture
 
@@ -167,6 +176,8 @@ cas/               parts & accessories store: catalogue, fitment, cart, checkout
   seed/            demo catalogue + curated product-photo credits (part_photos.json)
 driverzone/        rides & chauffeur hire: booking, dispatch, live tracking, driver app, ratings
   services.py      OSRM routing + cache, pricing, nearest-driver dispatch, trip state machine, demo simulation
+  consumers.py     WebSocket consumers for a trip, the driver app and the ops map
+  realtime.py      broadcasts a change to the right groups once the transaction commits
 static/js/driverzone.js   Leaflet maps, Photon search, booking panel, live tracking, driver app
 ```
 
@@ -177,6 +188,7 @@ Decisions worth calling out:
 - **Codes stay out of the inbox preview.** The subject line and the hidden preheader carry no code.
 - **Verification fails safe.** It is mandatory only when email delivery is configured, so a deploy without SMTP never locks users out. Existing accounts were marked verified by a data migration.
 - **Safe chat.** Conversations are participant-only over HTTP and WebSocket, and messages are rendered with `textContent`.
+- **Push a nudge, not the data.** Broadcasts only say "this trip changed"; each consumer rebuilds the payload with the same code as the HTTP API and the same permission checks (rider, assigned driver or staff), and sends happen after the database commit so nobody sees a state that was rolled back.
 
 ## Run it locally
 
@@ -218,7 +230,17 @@ The moderator is deliberately **not** a superuser. To restore fresh demo data, r
 
 ## Deploying to Render
 
-[`render.yaml`](render.yaml) describes a free web service: **New → Blueprint**, pick the repo, then fill in the optional keys above under **Environment**. The build runs `build.sh`. On start the app migrates, seeds demo data if the database is empty, and serves HTTP and WebSockets with daphne. The SQLite demo resets on every deploy; set `DATABASE_URL` to a Postgres database to keep data.
+[`render.yaml`](render.yaml) describes a free web service: **New → Blueprint**, pick the repo, then fill in the optional keys above under **Environment**. The build runs `build.sh`. On start the app migrates, seeds demo data if the database is empty, and serves HTTP and WebSockets with daphne. Render checks `/healthz/` before switching traffic to a new deploy.
+
+### Production checklist
+
+The hosted demo uses SQLite on Render's free disk, so **every deploy resets the data, including real sign-ups**. Before inviting real users:
+
+1. **Persistent database.** Create a free Postgres database (for example on [Neon](https://neon.tech)) and set `DATABASE_URL` on Render. The app migrates on start and only seeds the demo data when the database is empty.
+2. **Uploaded photos.** Render's disk is wiped on deploy too; move `MEDIA` to object storage (Cloudinary, S3 or R2) so seller and vendor uploads survive.
+3. **Google sign-in.** On the OAuth consent screen, add the privacy policy (`/privacy/`) and terms (`/terms/`) URLs and publish the app so any Google account can sign in.
+4. **More than one server process?** Set `REDIS_URL` so WebSocket broadcasts reach every process.
+5. **Paystack live keys** and its webhook URL once you're ready to take real deposits.
 
 ## Tests
 
@@ -226,16 +248,18 @@ The moderator is deliberately **not** a superuser. To restore fresh demo data, r
 python manage.py test
 ```
 
-132 tests cover:
+146 tests cover:
 - Search and filters, moderation visibility and price insight.
 - The guest → sign-in → checkout hand-off and the cart merge.
 - Each checkout step: date validation, the locked email, exact totals, demo and mocked Paystack payments, and a car reserved by someone else mid-checkout.
 - The reservation lifecycle (schedule, complete, cancel, refund, seller-only actions).
 - Webhook signatures, the email-code sign-up and password-reset flows (including that codes stay out of subjects and previews), chat privacy, and regression tests for bugs fixed during the rebuild.
+- The parts store (fitment, stock locking, fulfilment) and DriverZone (pricing, dispatch, the trip state machine, simulation).
+- WebSockets: live trip updates reach the rider, strangers are refused, drivers stream GPS, and the ops feed is staff-only.
+- Hardening: health check, sitemap visibility, robots, the service worker, link-preview tags, security headers and rate limiting.
 
 ## Roadmap
 
-- Real-time push over WebSockets for trip updates (the live map currently polls every few seconds)
 - Persistent Postgres + Cloudinary uploads for the hosted demo
 - Saved searches with email alerts, and side-by-side comparison
 

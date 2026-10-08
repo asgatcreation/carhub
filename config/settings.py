@@ -4,6 +4,7 @@ Django settings for CarHub.
 All secrets and environment-specific values come from environment variables
 (loaded from a local `.env` file in development — see `.env.example`).
 """
+import mimetypes
 import os
 from pathlib import Path
 from urllib.parse import urlparse
@@ -54,6 +55,7 @@ SITE_URL = (os.environ.get('SITE_URL') or (f'https://{RENDER_EXTERNAL_HOSTNAME}'
 # ======================
 
 INSTALLED_APPS = [
+    'daphne',  # runserver serves WebSockets too (live tracking, chat, notifications)
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -63,6 +65,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.humanize',
     'django.contrib.sites',
+    'django.contrib.sitemaps',
 
     'allauth',
     'allauth.account',
@@ -78,6 +81,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'core.middleware.PermissionsPolicyMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -295,7 +299,7 @@ SESSION_COOKIE_HTTPONLY = True
 # ======================
 
 # Set when serving through an ASGI server (daphne/uvicorn); otherwise chat falls back to HTTP polling.
-CHAT_WEBSOCKETS = env_bool('CHAT_WEBSOCKETS', False)
+CHAT_WEBSOCKETS = env_bool('CHAT_WEBSOCKETS', True)  # daphne serves WebSockets in dev (runserver) and production
 REDIS_URL = os.environ.get('REDIS_URL', '')
 CHANNEL_LAYERS = {
     'default': (
@@ -356,3 +360,6 @@ if not DEBUG:
     X_FRAME_OPTIONS = 'DENY'
     SECURE_HSTS_SECONDS = int(os.environ.get('DJANGO_HSTS_SECONDS', '3600'))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+
+# Serve the PWA manifest with its registered type (WhiteNoise uses mimetypes).
+mimetypes.add_type('application/manifest+json', '.webmanifest')
