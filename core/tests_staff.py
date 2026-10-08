@@ -176,3 +176,15 @@ class PasswordResetMessagesTests(BaseTestCase):
             resp = self.client.post(reverse('account_reset_password'), {'email': 'buyer@example.com'}, follow=True)
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "couldn&#x27;t send the email")
+
+
+class AdminSkinTests(StaffTestCase):
+    def test_admin_uses_carhub_skin_and_dashboard(self):
+        self.staff.is_superuser = True
+        self.staff.save()
+        self.client.force_login(self.staff)
+        resp = self.client.get('/admin/')
+        self.assertContains(resp, 'css/admin.css')
+        self.assertContains(resp, 'Open admin console')
+        self.assertContains(resp, 'Listings to approve')
+        self.assertContains(self.client.get('/admin/cars/car/'), 'css/admin.css')

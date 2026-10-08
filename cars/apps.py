@@ -4,6 +4,7 @@ from django.apps import AppConfig
 class CarsConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'cars'
+    verbose_name = 'Car marketplace'
     def ready(self):
         # Import signals to ensure they are registered when app is ready
         try:

@@ -1,0 +1,27 @@
+{% extends "admin/index.html" %}
+{# Dashboard header above Django's app list: queue shortcuts into the staff console. #}
+
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<section class="ch-hero">
+  <div>
+    <span class="ch-eyebrow">Database admin</span>
+    <h1>Welcome back, {% firstof user.first_name user.get_username %}</h1>
+    <p>Raw access to every table: listings, orders, users, reviews and settings. For approving and rejecting, the <strong>admin console</strong> is faster and notifies people automatically.</p>
+  </div>
+  <a class="ch-btn ch-btn-primary" href="{% url 'staff:overview' %}">Open admin console →</a>
+</section>
+
+{% if queue %}
+<div class="ch-queues">
+  <a href="{% url 'cars:moderation' %}" class="ch-queue q-amber"><b>{{ queue.listings }}</b><span>Listings to approve</span></a>
+  <a href="{% url 'staff:reviews' %}" class="ch-queue q-blue"><b>{{ queue.reviews }}</b><span>Reviews to moderate</span></a>
+  <a href="{% url 'staff:photos' %}" class="ch-queue q-violet"><b>{{ queue.photos }}</b><span>Photos to check</span></a>
+  <a href="{% url 'staff:verifications' %}" class="ch-queue q-green"><b>{{ queue.verifications }}</b><span>Verification requests</span></a>
+</div>
+{% endif %}
+
+<h2 class="ch-section-title">Data</h2>
+{{ block.super }}
+{% endblock %}

@@ -7,7 +7,7 @@
 [![CI](https://github.com/asgatcreation/carhub/actions/workflows/ci.yml/badge.svg)](https://github.com/asgatcreation/carhub/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.13-3776AB?logo=python&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-5.2-0C4B33?logo=django&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-93%20passing-11845b)
+![Tests](https://img.shields.io/badge/tests-94%20passing-11845b)
 
 **[Live demo →](https://carhub-es73.onrender.com/)** &nbsp;·&nbsp; [Buyer journey](#the-buyer-journey) &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Run it locally](#run-it-locally) &nbsp;·&nbsp; [Architecture](#architecture)
 
@@ -88,7 +88,7 @@ Every screen is designed for a 390px-wide phone first. Car sections become swipe
 **Staff**
 - A front-end admin console (`/staff/`) with its own branded sign-in, dark sidebar and live queue counts.
 - Pre-publication moderation of listings from new sellers and of every buyer review; spot checks of new photos; verification of dealers, drivers and accessory vendors (approve, reject or request changes).
-- The Django admin stays available to superusers for raw data work.
+- The Django admin is re-skinned to match CarHub (dark header, card dashboard with queue shortcuts, styled tables, filters and forms, light and dark mode) and stays available for raw data work.
 
 **Accounts**
 - Email and password, or **Continue with Google**. Both lead to the same account: Google signs in an existing email account, and Google-only users can add a password through "Forgot password".
@@ -106,7 +106,7 @@ Every screen is designed for a 390px-wide phone first. Car sections become swipe
 | Frontend | Server-rendered templates, a hand-written CSS design system (tokens, dark theme), vanilla JS with progressive enhancement |
 | Data | SQLite locally, Postgres via `DATABASE_URL` |
 | Hosting | Render (daphne ASGI), WhiteNoise static files |
-| Quality | 93 automated tests, GitHub Actions CI on Python 3.12 and 3.13 |
+| Quality | 94 automated tests, GitHub Actions CI on Python 3.12 and 3.13 |
 
 ## Architecture
 
@@ -177,7 +177,7 @@ The moderator is deliberately **not** a superuser. To restore fresh demo data, r
 python manage.py test
 ```
 
-93 tests cover:
+94 tests cover:
 - Search and filters, moderation visibility and price insight.
 - The guest → sign-in → checkout hand-off and the cart merge.
 - Each checkout step: date validation, the locked email, exact totals, demo and mocked Paystack payments, and a car reserved by someone else mid-checkout.

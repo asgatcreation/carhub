@@ -43,7 +43,7 @@ def staff_console(request):
     user = getattr(request, 'user', None)
     if not (user and user.is_authenticated and user.is_staff):
         return {}
-    if not request.path.startswith(('/staff/', '/cars/moderation')):
+    if not (request.path.startswith(('/staff/', '/cars/moderation')) or request.path == '/admin/'):
         return {'is_staff_user': True}
     from core.staff import queue_counts
     return {'is_staff_user': True, 'queue': queue_counts()}

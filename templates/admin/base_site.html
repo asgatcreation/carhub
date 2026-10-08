@@ -1,0 +1,63 @@
+{% extends "admin/base.html" %}
+{% load static %}
+{# CarHub skin for the Django admin: same fonts, colours and brand as the marketplace and staff console. #}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | CarHub admin{% endblock %}
+
+{% block extrastyle %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+{% endblock %}
+
+{# extrahead renders after every page's own admin CSS (forms.css, changelists.css), so the skin wins. #}
+{% block extrahead %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/admin.css' %}">{% endblock %}
+
+{% block branding %}
+  <a class="ch-brand" href="{% url 'admin:index' %}">
+    {% include 'partials/logo_mark.html' %}
+    <span>Car<em>Hub</em></span>
+    <span class="ch-brand-tag">Database admin</span>
+  </a>
+  {% if user.is_anonymous %}{% include "admin/color_theme_toggle.html" %}{% endif %}
+{% endblock %}
+
+{% block usertools %}
+  {% if has_permission %}
+    <div id="user-tools">
+      <a class="ch-top-link" href="{% url 'staff:overview' %}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="9" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="5" rx="1.5"/><rect x="13.5" y="11.5" width="7" height="9" rx="1.5"/><rect x="3.5" y="15.5" width="7" height="5" rx="1.5"/></svg>
+        <span>Admin console</span>
+      </a>
+      {% if site_url %}
+        <a class="ch-top-link" href="{{ site_url }}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>
+          <span>View site</span>
+        </a>
+      {% endif %}
+      {% include "admin/color_theme_toggle.html" %}
+      <details class="ch-user">
+        <summary>
+          <span class="ch-avatar">{{ user|initials }}</span>
+          <span class="ch-user-name">{% firstof user.get_short_name user.get_username %}<small>{% if user.is_superuser %}Administrator{% else %}Moderator{% endif %}</small></span>
+        </summary>
+        <div class="ch-user-menu">
+          <div class="ch-user-email">{{ user.email }}</div>
+          {% if user.has_usable_password %}<a href="{% url 'admin:password_change' %}">Change password</a>{% endif %}
+          <a href="{% url 'staff:overview' %}">Admin console</a>
+          <form id="logout-form" method="post" action="{% url 'admin:logout' %}">
+            {% csrf_token %}
+            <button type="submit">Sign out</button>
+          </form>
+        </div>
+      </details>
+    </div>
+  {% endif %}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
+
+{% block footer %}
+  <div class="ch-footer">CarHub admin · Changes here edit live data directly. For day-to-day moderation use the <a href="{% url 'staff:overview' %}">admin console</a>.</div>
+{% endblock %}
