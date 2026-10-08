@@ -1,0 +1,19 @@
+{# "My car" picker in a drawer. Selecting a make fills the model list (data from vehicle_catalog_json). #}
+<div class="drawer drawer-right" id="garage-drawer" aria-hidden="true">
+  <div class="drawer-backdrop" data-drawer-close></div>
+  <div class="drawer-panel garage-panel" role="dialog" aria-label="My car">
+    <div class="row between mb-2">
+      <h2 class="garage-title">{% icon 'car' 22 %} My car</h2>
+      <button class="icon-btn" type="button" data-drawer-close aria-label="Close">{% icon 'x' 22 %}</button>
+    </div>
+    <p class="muted small mt-0">Tell us what you drive and we'll show parts that fit, with a <span class="fit-badge fits">{% icon 'check' 12 %} Fits</span> badge on every match.</p>
+    {% if vehicle %}
+      <div class="garage-current">
+        <span class="garage-icon">{% icon 'car' 22 %}</span>
+        <div><small>Shopping for</small><strong>{{ vehicle_label }}</strong></div>
+        <form method="post" action="{% url 'cas:garage_clear' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="link-btn muted">Remove</button></form>
+      </div>
+    {% endif %}
+    {% include 'cas/_garage_form.html' with form_id='garage-drawer-form' %}
+  </div>
+</div>

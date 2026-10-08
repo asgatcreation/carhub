@@ -1,0 +1,11 @@
+<div class="vendor-head">
+  <div>
+    <span class="eyebrow">{% icon 'wrench' 14 %} Vendor</span>
+    <h1>{{ user.profile.company_name|default:user.get_full_name }}</h1>
+  </div>
+  <a class="btn btn-primary" href="{% url 'cas:product_create' %}">{% icon 'plus' 18 %} Add product</a>
+</div>
+<nav class="seg-tabs vendor-tabs" aria-label="Vendor">
+  <a href="{% url 'cas:vendor' %}" class="{% if vendor_section == 'products' %}is-active{% endif %}">{% icon 'box' 16 %} Products</a>
+  <a href="{% url 'cas:vendor_orders' %}" class="{% if vendor_section == 'orders' %}is-active{% endif %}">{% icon 'truck' 16 %} Orders{% if stats.to_ship %} <b>{{ stats.to_ship }}</b>{% endif %}</a>
+</nav>

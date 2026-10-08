@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}Car parts & accessories, delivered | CarHub{% endblock %}
+{% block content %}
+{% include 'cas/_store_bar.html' %}
+
+<section class="store-hero">
+  <div class="container store-hero-inner">
+    <div class="store-hero-copy">
+      <span class="hero-pill">{% icon 'wrench' 14 %} <span><strong>{{ stats.products }}</strong> parts from <strong>{{ stats.vendors }}</strong> verified vendors</span></span>
+      <h1>Parts that <span class="hl">fit your car.</span><br>Delivered to your door.</h1>
+      <p class="lead">Tyres, batteries, brake pads, oil and accessories, genuine and aftermarket. Tell us what you drive and we'll only show what fits.</p>
+      <div class="garage-hero-card">
+        <div class="ghc-head">
+          {% if vehicle %}
+            <span>{% icon 'check-circle' 18 %} Shopping for your <strong>{{ vehicle_label }}</strong></span>
+            <form method="post" action="{% url 'cas:garage_clear' %}">{% csrf_token %}<button class="link-btn">Change car</button></form>
+          {% else %}
+            <span>{% icon 'car' 18 %} <strong>What do you drive?</strong></span>
+          {% endif %}
+        </div>
+        {% if vehicle %}
+          <a class="btn btn-primary btn-lg btn-block" href="{% url 'cas:shop' %}?fits=on">{% icon 'search' 18 %} Shop parts for my {{ vehicle.model }}</a>
+        {% else %}
+          {% include 'cas/_garage_form.html' with form_id='hero-garage' next='/accessories/shop/' %}
+        {% endif %}
+      </div>
+    </div>
+    <div class="store-hero-art" aria-hidden="true">
+      {% for c in categories|slice:':6' %}
+        <a class="hero-cat c{{ forloop.counter }}" href="{{ c.get_absolute_url }}" tabindex="-1"><span class="hc-icon">{% icon c.icon 26 %}</span><strong>{{ c.name }}</strong><small>{{ c.n }} item{{ c.n|pluralize }}</small></a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <ul class="store-trust">
+    <li>{% icon 'verified' 22 %}<div><strong>Verified vendors</strong><span>Every product checked before it's listed</span></div></li>
+    <li>{% icon 'send' 22 %}<div><strong>Delivery to all 36 states</strong><span>Free on orders over ₦100,000</span></div></li>
+    <li>{% icon 'card' 22 %}<div><strong>Pay on delivery</strong><span>In Lagos and Abuja</span></div></li>
+    <li>{% icon 'shield' 22 %}<div><strong>Fit guarantee</strong><span>Wrong part? Cancel before it ships</span></div></li>
+  </ul>
+</div>
+
+<section class="section" data-reveal>
+  <div class="container">
+    <div class="section-head"><div><h2>Shop by category</h2><p>Everything your car needs, from routine service to road-trip extras.</p></div>
+      <a class="link-arrow" href="{% url 'cas:shop' %}">All parts {% icon 'arrow-right' 18 %}</a></div>
+    <div class="cat-grid">
+      {% for c in categories %}
+        <a class="cat-tile" href="{{ c.get_absolute_url }}">
+          <span class="cat-icon">{% icon c.icon 24 %}</span>
+          <strong>{{ c.name }}</strong>
+          <small>{{ c.n }} item{{ c.n|pluralize }}</small>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% if for_my_car %}
+<section class="section" style="padding-top:0" data-reveal>
+  <div class="container">
+    <div class="section-head"><div><span class="eyebrow">{% icon 'check-circle' 14 %} Guaranteed fit</span><h2>For your {{ vehicle_label }}</h2></div>
+      <a class="link-arrow" href="{% url 'cas:shop' %}?fits=on">See all that fit {% icon 'arrow-right' 18 %}</a></div>
+    <div class="parts-grid rail">{% for p in for_my_car %}{% include 'cas/_product_card.html' %}{% endfor %}</div>
+  </div>
+</section>
+{% endif %}
+
+{% if deals %}
+<section class="section" style="padding-top:0" data-reveal>
+  <div class="container">
+    <div class="section-head"><div><span class="eyebrow">{% icon 'tag' 14 %} On sale</span><h2>Deals this week</h2></div>
+      <a class="link-arrow" href="{% url 'cas:shop' %}?on_sale=on">All deals {% icon 'arrow-right' 18 %}</a></div>
+    <div class="parts-grid rail">{% for p in deals %}{% include 'cas/_product_card.html' %}{% endfor %}</div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section" style="padding-top:0" data-reveal>
+  <div class="container">
+    <div class="section-head"><div><span class="eyebrow">{% icon 'trend' 14 %} Popular</span><h2>Best sellers</h2></div>
+      <a class="link-arrow" href="{% url 'cas:shop' %}">Browse all {% icon 'arrow-right' 18 %}</a></div>
+    <div class="parts-grid rail">{% for p in popular %}{% include 'cas/_product_card.html' %}{% endfor %}</div>
+  </div>
+</section>
+
+{% if brands %}
+<section class="section" style="padding-top:0" data-reveal>
+  <div class="container">
+    <div class="section-head"><div><h2>Trusted brands</h2></div></div>
+    <div class="brand-pills">
+      {% for b in brands %}<a href="{% url 'cas:shop' %}?brand={{ b.slug }}">{{ b.name }}<small>{{ b.n }}</small></a>{% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="cta-band">
+      <div><h2>Sell parts on CarHub</h2><p>Reach drivers who already know their car. Approved vendors list for free and get paid per order.</p></div>
+      <div class="row row-wrap">
+        <a href="{% url 'cas:sell' %}" class="btn btn-primary btn-lg">{% icon 'wrench' 20 %} Become a vendor</a>
+        {% if user.profile.is_cas_seller_approved %}<a href="{% url 'cas:vendor' %}" class="btn btn-lg" style="--btn-bg:transparent;--btn-fg:#fff;--btn-line:rgba(255,255,255,.3)">Vendor dashboard</a>{% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

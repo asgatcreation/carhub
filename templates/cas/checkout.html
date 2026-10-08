@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}Checkout | CarHub parts{% endblock %}
+{% block content %}
+<div class="container section" style="padding-top:28px">
+  <a class="link-arrow mb-2" href="{% url 'cas:cart' %}">{% icon 'arrow-left' 18 %} Back to cart</a>
+  <h1 style="font-size:clamp(1.6rem,3vw,2.1rem)" class="mt-1">Checkout</h1>
+
+  <form method="post" class="checkout-layout" novalidate data-busy data-parts-checkout
+        data-fees='{{ fees_json }}' data-subtotal="{{ subtotal }}" data-free-from="{{ free_from }}"
+        data-pod-states="{{ pod_states|join:',' }}" data-pod-limit="{{ pod_limit }}">
+    {% csrf_token %}
+    <div class="card">
+      {% if form.non_field_errors %}<div class="notice danger m-2">{% icon 'alert' 18 %}<div>{{ form.non_field_errors|join:' ' }}</div></div>{% endif %}
+      <div class="form-section">
+        <h3>{% icon 'user' 20 %} Contact</h3>
+        <div class="form-grid">
+          {% include 'partials/field.html' with field=form.full_name %}
+          {% include 'partials/field.html' with field=form.phone %}
+          <div class="field span-2">
+            <label>Email</label>
+            <div class="locked-field">{% icon 'lock' 16 %}<span>{{ user.email }}</span></div>
+            <span class="help">Receipts and tracking updates go to your account email.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>{% icon 'truck' 20 %} Delivery</h3>
+        <div class="option-cards two">
+          {% for radio in form.delivery_method %}
+            <label class="option-card">{{ radio.tag }}<span><strong>{% if radio.data.value == 'delivery' %}{% icon 'truck' 16 %} Deliver to me{% else %}{% icon 'pin' 16 %} I'll pick it up{% endif %}</strong>
+              <small>{% if radio.data.value == 'delivery' %}2–5 working days · from ₦2,500, free over {{ free_from|naira }}{% else %}Free · collect from the vendor's shop once it's ready{% endif %}</small></span></label>
+          {% endfor %}
+        </div>
+        <div class="form-grid mt-2">
+          {% include 'partials/field.html' with field=form.state %}
+          {% include 'partials/field.html' with field=form.city %}
+          <div class="span-2" data-address-row>{% include 'partials/field.html' with field=form.address %}</div>
+          <div class="span-2">{% include 'partials/field.html' with field=form.delivery_notes %}</div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>{% icon 'card' 20 %} Payment</h3>
+        <div class="option-cards">
+          {% for radio in form.payment_method %}
+            <label class="option-card" data-pay-option="{{ radio.data.value }}">{{ radio.tag }}<span>
+              <strong>{% if radio.data.value == 'paystack' %}{% icon 'card' 16 %} Card, bank transfer or USSD{% elif radio.data.value == 'demo' %}{% icon 'zap' 16 %} Demo payment{% else %}{% icon 'box' 16 %} Pay on delivery{% endif %}</strong>
+              <small>{% if radio.data.value == 'paystack' %}Secure checkout by Paystack{% elif radio.data.value == 'demo' %}Portfolio demo: places the order without charging{% else %}Cash or transfer to the courier · Lagos &amp; Abuja, up to {{ pod_limit|naira }}{% endif %}</small>
+            </span></label>
+          {% endfor %}
+        </div>
+        {% for e in form.payment_method.errors %}<p class="error mt-1">{{ e }}</p>{% endfor %}
+        <p class="xs muted mt-1 mb-0" data-pod-note hidden>{% icon 'info' 12 %} Pay on delivery isn't available for this address.</p>
+      </div>
+    </div>
+
+    <aside class="checkout-aside">
+      <div class="card card-pad summary-card">
+        <h3>Order summary</h3>
+        <ul class="mini-lines">
+          {% for p, qty, total in lines %}
+            <li><span class="ml-img"><img src="{{ p.thumbnail }}" alt="" referrerpolicy="no-referrer"><b>{{ qty }}</b></span><span class="ml-name">{{ p.name }}</span><strong>{{ total|naira }}</strong></li>
+          {% endfor %}
+        </ul>
+        <dl class="sum-rows">
+          <div><dt>Subtotal</dt><dd>{{ summary.subtotal|naira }}</dd></div>
+          <div><dt>Delivery</dt><dd data-fee>{% if summary.state_known %}{% if summary.delivery_fee %}{{ summary.delivery_fee|naira }}{% else %}Free{% endif %}{% else %}Select a state{% endif %}</dd></div>
+          {% if summary.savings %}<div class="saving"><dt>Savings</dt><dd>−{{ summary.savings|naira }}</dd></div>{% endif %}
+        </dl>
+        <div class="sum-total"><span>Total</span><strong data-grand>{{ summary.total|naira }}</strong></div>
+        <button class="btn btn-primary btn-lg btn-block mt-2" type="submit">{% icon 'lock' 18 %} <span data-pay-label>Place order</span></button>
+        <p class="xs subtle text-center mt-1 mb-0">By placing your order you agree to CarHub's terms. Items can be cancelled before they ship.</p>
+      </div>
+    </aside>
+  </form>
+</div>
+{% endblock %}

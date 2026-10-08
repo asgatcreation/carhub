@@ -1,0 +1,26 @@
+<form method="post" action="{% url 'cas:garage_set' %}" class="garage-form {{ extra_class }}" data-garage-form>
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next|default:request.get_full_path }}">
+  <div class="garage-fields">
+    <div class="gf">
+      <label for="{{ form_id }}-make">Make</label>
+      <select id="{{ form_id }}-make" name="make" required data-garage-make data-selected="{{ vehicle.make }}">
+        <option value="">Select make</option>
+      </select>
+    </div>
+    <div class="gf">
+      <label for="{{ form_id }}-model">Model</label>
+      <select id="{{ form_id }}-model" name="model" required data-garage-model data-selected="{{ vehicle.model }}" disabled>
+        <option value="">Select model</option>
+      </select>
+    </div>
+    <div class="gf">
+      <label for="{{ form_id }}-year">Year</label>
+      <select id="{{ form_id }}-year" name="year" required data-garage-year data-selected="{{ vehicle.year }}">
+        <option value="">Year</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" type="submit">{% icon 'search' 18 %} <span>{{ button|default:'Find parts' }}</span></button>
+  </div>
+</form>
+<script type="application/json" data-vehicle-catalog>{{ vehicle_catalog_json|safe }}</script>

@@ -232,6 +232,7 @@ def car_detail(request, slug):
         'rating': rating,
         'features_by_group': features_by_group,
         'similar': similar,
+        'parts_for_car': _parts_for(car),
         'recent': recent,
         'in_cart': car.pk in services.cart_car_ids(request),
         'saved': car.pk in services.wishlist_car_ids(request),
@@ -463,9 +464,15 @@ def paystack_webhook(request):
         return HttpResponseBadRequest('invalid json')
     if event.get('event') == 'charge.success':
         data = event.get('data') or {}
-        order = Order.objects.filter(payment_reference=data.get('reference', '')).first()
+        reference = data.get('reference', '')
+        order = Order.objects.filter(payment_reference=reference).first()
         if order and int(data.get('amount', 0)) == int(order.deposit_total * 100):
             order.mark_paid(order.payment_reference)
+        if not order:  # parts-store orders share the same Paystack account
+            from cas.models import Order as PartsOrder
+            parts = PartsOrder.objects.filter(payment_reference=reference).first()
+            if parts and int(data.get('amount', 0)) == int(parts.total * 100):
+                parts.confirm(reference)
     return HttpResponse(status=200)
 
 
@@ -705,6 +712,17 @@ def moderate(request, car_id):
 # ======================
 # SELLERS
 # ======================
+
+def _parts_for(car):
+    """Parts-store products made for this exact car (universal accessories excluded)."""
+    from cas.models import Product
+    parts = list(Product.objects.public().fits(car.brand, car.model, car.year).filter(universal_fit=False, stock__gt=0)
+                 .select_related('brand', 'category').prefetch_related('images', 'fitments').order_by('-sold_count')[:4])
+    vehicle = {'make': car.brand, 'model': car.model, 'year': car.year}
+    for p in parts:
+        p.fit = True
+    return {'items': parts, 'vehicle': vehicle}
+
 
 def seller_profile(request, seller_id):
     seller = get_object_or_404(User.objects.select_related('profile'), pk=seller_id, is_active=True)

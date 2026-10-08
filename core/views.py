@@ -37,7 +37,15 @@ def home(request):
         },
         'recent': recent,
         'saved_ids': set(services.wishlist_car_ids(request)),
+        'parts': _popular_parts(),
     })
+
+
+def _popular_parts():
+    from cas.models import Category, Product
+    items = list(Product.objects.public().filter(stock__gt=0).select_related('brand', 'category')
+                 .prefetch_related('images', 'fitments').order_by('-sold_count')[:4])
+    return {'items': items, 'categories': Category.objects.all()[:6], 'count': Product.objects.public().count()}
 
 
 def about(request):
@@ -71,11 +79,6 @@ def contact(request):
 
 def coming_soon(request, section):
     pages = {
-        'accessories': {
-            'title': 'Accessories & parts', 'icon': 'wrench',
-            'lead': 'Genuine parts, tyres and accessories from verified vendors — delivered across Nigeria.',
-            'points': ['OEM and aftermarket parts matched to your car', 'Verified vendors with ratings', 'Pay on delivery in major cities'],
-        },
         'drivers': {
             'title': 'Hire a driver', 'icon': 'steering',
             'lead': 'Book vetted, licensed drivers by the hour, day or for interstate trips.',

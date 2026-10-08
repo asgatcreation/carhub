@@ -16,6 +16,7 @@
 {% if queue %}
 <div class="ch-queues">
   <a href="{% url 'cars:moderation' %}" class="ch-queue q-amber"><b>{{ queue.listings }}</b><span>Listings to approve</span></a>
+  <a href="{% url 'staff:products' %}" class="ch-queue q-teal"><b>{{ queue.products }}</b><span>Parts to approve</span></a>
   <a href="{% url 'staff:reviews' %}" class="ch-queue q-blue"><b>{{ queue.reviews }}</b><span>Reviews to moderate</span></a>
   <a href="{% url 'staff:photos' %}" class="ch-queue q-violet"><b>{{ queue.photos }}</b><span>Photos to check</span></a>
   <a href="{% url 'staff:verifications' %}" class="ch-queue q-green"><b>{{ queue.verifications }}</b><span>Verification requests</span></a>

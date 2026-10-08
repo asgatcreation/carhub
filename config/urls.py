@@ -16,7 +16,7 @@ urlpatterns = [
     path('', core_views.home, name='home'),
     path('about/', core_views.about, name='about'),
     path('contact/', core_views.contact, name='contact'),
-    path('accessories/', core_views.coming_soon, {'section': 'accessories'}, name='accessories'),
+    path('accessories/', include('cas.urls')),
     path('drivers/', core_views.coming_soon, {'section': 'drivers'}, name='drivers'),
 
     path('cars/', include('cars.urls')),
@@ -30,7 +30,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # Old URLs kept as redirects
-    path('cas/', RedirectView.as_view(pattern_name='accessories')),
+    path('cas/', RedirectView.as_view(pattern_name='cas:home')),
     path('driverzone/', RedirectView.as_view(pattern_name='drivers')),
     path('users/', RedirectView.as_view(pattern_name='users:dashboard')),
     path('users/<path:rest>', RedirectView.as_view(url='/account/%(rest)s')),

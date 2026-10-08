@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% block title %}{% if p.brand %}{{ p.brand.name }} {% endif %}{{ p.name }} | CarHub parts{% endblock %}
+{% block head %}
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"{{ p.name|escapejs }}","sku":"{{ p.sku|escapejs }}",{% if p.brand %}"brand":{"@type":"Brand","name":"{{ p.brand.name|escapejs }}"},{% endif %}"image":"{{ p.primary_image|escapejs }}","offers":{"@type":"Offer","priceCurrency":"NGN","price":"{{ p.price }}","availability":"https://schema.org/{% if p.in_stock %}InStock{% else %}OutOfStock{% endif %}"}{% if p.rating_count %},"aggregateRating":{"@type":"AggregateRating","ratingValue":"{{ p.rating_avg }}","reviewCount":"{{ p.rating_count }}"}{% endif %}}</script>
+{% endblock %}
+{% block content %}
+{% include 'cas/_store_bar.html' %}
+{% with images=p.images.all %}
+<div class="container">
+  <nav class="crumbs mt-2" aria-label="Breadcrumb"><a href="{% url 'cas:home' %}">Parts</a>{% icon 'chevron-right' 14 %}<a href="{{ p.category.get_absolute_url }}">{{ p.category.name }}</a>{% icon 'chevron-right' 14 %}<span>{{ p.name|truncatechars:40 }}</span></nav>
+  {% if p.status != 'approved' %}<div class="notice {% if p.status == 'rejected' %}danger{% else %}info{% endif %} mb-2">{% icon 'info' 18 %}<div class="small"><strong>{{ p.get_status_display }}.</strong> Only you and CarHub staff can see this page.{% if p.moderation_note %} Note: {{ p.moderation_note }}{% endif %}</div></div>{% endif %}
+
+  <div class="pdp">
+    <div class="pdp-gallery">
+      <div class="gallery" data-gallery>
+        <div class="gallery-main pdp-main" data-gallery-main>
+          <img src="{{ p.primary_image }}" alt="{{ p.name }}" referrerpolicy="no-referrer">
+          {% if images|length > 1 %}
+            <button type="button" class="gallery-nav prev" data-gallery-prev aria-label="Previous photo">{% icon 'chevron-left' 22 %}</button>
+            <button type="button" class="gallery-nav next" data-gallery-next aria-label="Next photo">{% icon 'chevron-right' 22 %}</button>
+          {% endif %}
+          {% if p.on_sale %}<span class="badge badge-sale pdp-sale">−{{ p.discount_pct }}%</span>{% endif %}
+        </div>
+        {% if images|length > 1 %}
+          <div class="gallery-thumbs">
+            {% for img in images %}<button type="button" class="{% if forloop.first %}is-active{% endif %}" data-thumb data-src="{{ img.src }}" data-author="{{ img.credit }}" data-license="{{ img.license }}" data-source="{{ img.source_url }}" aria-label="Photo {{ forloop.counter }}"><img src="{{ img.src }}" alt="" loading="lazy" referrerpolicy="no-referrer"></button>{% endfor %}
+          </div>
+        {% endif %}
+        {% with first=images.0 %}{% if first.credit %}<p class="photo-credit mb-0" data-gallery-credit>Photo: {{ first.credit }} · <a href="{{ first.source_url }}" target="_blank" rel="noopener">{{ first.license }}</a> via Wikimedia Commons</p>{% endif %}{% endwith %}
+      </div>
+    </div>
+
+    <div class="pdp-info">
+      <div class="pdp-brand">{% if p.brand %}<a href="{% url 'cas:shop' %}?brand={{ p.brand.slug }}">{{ p.brand.name }}</a> · {% endif %}<span>{{ p.get_part_type_display }}</span></div>
+      <h1 class="pdp-title">{{ p.name }}</h1>
+      <div class="pdp-meta">
+        {% if p.rating_count %}<a href="#reviews" class="pdp-rating"><span class="stars">{% for i in '12345' %}<svg class="icon {% if forloop.counter > p.rating_avg|floatformat:0|add:0 %}off{% endif %}" width="16" height="16"><use href="#i-star"></use></svg>{% endfor %}</span> {{ p.rating_avg|floatformat:1 }} · {{ p.rating_count }} review{{ p.rating_count|pluralize }}</a>{% endif %}
+        {% if p.sold_count %}<span>{{ p.sold_count }} sold</span>{% endif %}
+        {% if p.sku %}<span>Part no. <strong class="ink">{{ p.sku }}</strong></span>{% endif %}
+      </div>
+
+      <div class="pdp-price">
+        <strong>{{ p.price|naira }}</strong>
+        {% if p.on_sale %}<s>{{ p.compare_at_price|naira }}</s><span class="badge badge-sale">Save {{ p.compare_at_price|sub:p.price|naira }}</span>{% endif %}
+      </div>
+      {% if p.short_description %}<p class="pdp-lead">{{ p.short_description }}</p>{% endif %}
+
+      <div class="fit-check {% if p.fit is True %}is-fit{% elif p.fit is False %}is-nofit{% endif %}">
+        {% if p.universal_fit %}
+          <span class="fc-icon">{% icon 'check' 18 %}</span><div><strong>Fits any car</strong><small>Universal accessory, no fitment needed.</small></div>
+        {% elif p.fit is True %}
+          <span class="fc-icon">{% icon 'check' 18 %}</span><div><strong>Fits your {{ vehicle_label }}</strong><small>Matched to the vendor's fitment list.</small></div>
+          <button type="button" class="link-btn" data-drawer-open="garage-drawer">Change car</button>
+        {% elif p.fit is False %}
+          <span class="fc-icon">{% icon 'x' 18 %}</span><div><strong>Doesn't fit your {{ vehicle_label }}</strong><small>See the compatible cars below, or <a class="link" href="{% url 'cas:shop' %}?category={{ p.category.slug }}&fits=on">find one that fits</a>.</small></div>
+          <button type="button" class="link-btn" data-drawer-open="garage-drawer">Change car</button>
+        {% else %}
+          <span class="fc-icon">{% icon 'car' 18 %}</span><div><strong>Will it fit?</strong><small>Add your car to check instantly.</small></div>
+          <button type="button" class="btn btn-sm" data-drawer-open="garage-drawer">Check fit</button>
+        {% endif %}
+      </div>
+
+      <div class="pdp-buy">
+        <div class="stock-line {% if not p.in_stock %}out{% elif p.low_stock %}low{% endif %}">
+          <span class="dot"></span>
+          {% if not p.in_stock %}Out of stock{% elif p.low_stock %}Only {{ p.stock }} left. Order soon.{% else %}In stock{% endif %}
+          {% if p.in_stock %}<span class="muted">· ships within {{ p.dispatch_days }} working day{{ p.dispatch_days|pluralize }}</span>{% endif %}
+        </div>
+        {% if p.in_stock %}
+          <form method="post" action="{% url 'cas:cart_add' p.pk %}" class="buy-form">
+            {% csrf_token %}
+            <div class="qty-stepper" data-qty>
+              <button type="button" data-qty-dec aria-label="Decrease quantity">{% icon 'minus' 16 %}</button>
+              <input type="number" name="quantity" value="1" min="1" max="{% if p.stock < 10 %}{{ p.stock }}{% else %}10{% endif %}" aria-label="Quantity">
+              <button type="button" data-qty-inc aria-label="Increase quantity">{% icon 'plus' 16 %}</button>
+            </div>
+            <button class="btn btn-dark btn-lg grow" type="submit">{% icon 'bag' 18 %} {% if in_cart %}Add another{% else %}Add to cart{% endif %}</button>
+            <button class="btn btn-primary btn-lg grow" type="submit" name="buy_now" value="1">Buy now</button>
+          </form>
+          {% if in_cart %}<p class="small muted mt-1 mb-0">{% icon 'check' 14 %} {{ in_cart }} in your <a class="link" href="{% url 'cas:cart' %}">cart</a></p>{% endif %}
+        {% endif %}
+        <ul class="pdp-perks">
+          <li>{% icon 'truck' 18 %}<span>Delivery from <strong>₦2,500</strong> · free over <strong>{{ free_delivery_from|naira }}</strong></span></li>
+          <li>{% icon 'card' 18 %}<span>Pay by card, transfer or USSD · <strong>pay on delivery</strong> in Lagos &amp; Abuja</span></li>
+          {% if p.warranty_months %}<li>{% icon 'shield' 18 %}<span><strong>{{ p.warranty_months }}-month</strong> warranty from the vendor</span></li>{% endif %}
+          <li>{% icon 'box' 18 %}<span>Changed your mind? Cancel any item before it ships for a full refund</span></li>
+        </ul>
+      </div>
+
+      <div class="vendor-card">
+        <span class="avatar">{{ p.vendor|initials }}</span>
+        <div class="grow">
+          <small>Sold by</small>
+          <strong>{{ p.vendor.profile.company_name|default:p.vendor.get_full_name }}</strong>
+          <div class="xs muted">{% icon 'verified' 12 %} Verified vendor · {{ vendor_stats.n }} product{{ vendor_stats.n|pluralize }}{% if vendor_stats.sold %} · {{ vendor_stats.sold }} sold{% endif %}{% if p.vendor.profile.city %} · {{ p.vendor.profile.city }}{% endif %}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pdp-details">
+    <section class="card card-pad">
+      <h2 class="pdp-h2">About this item</h2>
+      <div class="pdp-desc">{{ p.description|linebreaks }}</div>
+      {% if p.specs.all %}
+        <h3 class="pdp-h3">Specifications</h3>
+        <dl class="spec-table">{% for s in p.specs.all %}<div><dt>{{ s.name }}</dt><dd>{{ s.value }}</dd></div>{% endfor %}
+          {% if p.warranty_months %}<div><dt>Warranty</dt><dd>{{ p.warranty_months }} months</dd></div>{% endif %}
+          <div><dt>Type</dt><dd>{{ p.get_part_type_display }}</dd></div>
+        </dl>
+      {% endif %}
+    </section>
+
+    <section class="card card-pad" id="fitment">
+      <h2 class="pdp-h2">Compatible cars</h2>
+      {% if p.universal_fit %}
+        <p class="muted mb-0">{% icon 'check-circle' 16 %} Universal: fits any car.</p>
+      {% elif fitment_groups %}
+        <div class="fit-list">
+          {% for make, fits in fitment_groups %}
+            <div class="fit-make"><strong>{{ make }}</strong><div>{% for f in fits %}<span class="fit-chip {% if vehicle and f|fits_vehicle:vehicle %}is-yours{% endif %}">{{ f.model|default:'All models' }}{% if f.year_from %} <small>{% if f.year_to and f.year_to != f.year_from %}{{ f.year_from }}–{{ f.year_to }}{% elif f.year_to %}{{ f.year_from }}{% else %}{{ f.year_from }}+{% endif %}</small>{% endif %}</span>{% endfor %}</div></div>
+          {% endfor %}
+        </div>
+        <p class="xs subtle mt-2 mb-0">Fitment is provided by the vendor. Check the part number against your old part if you're unsure.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <section class="card card-pad mt-3" id="reviews">
+    <div class="row between row-wrap"><h2 class="pdp-h2 mb-0">Reviews</h2>{% if p.rating_count %}<span class="muted small">{{ p.rating_count }} review{{ p.rating_count|pluralize }}</span>{% endif %}</div>
+    {% if p.rating_count %}
+      <div class="review-summary">
+        <div class="rs-score"><strong>{{ p.rating_avg|floatformat:1 }}</strong><span class="stars">{% for i in '12345' %}<svg class="icon {% if forloop.counter > p.rating_avg|floatformat:0|add:0 %}off{% endif %}" width="18" height="18"><use href="#i-star"></use></svg>{% endfor %}</span></div>
+        <div class="rs-bars">{% for stars, n, pct in breakdown %}<div class="rating-bar"><span class="muted">{{ stars }} star</span><span class="track"><span class="fill" style="width:{{ pct }}%"></span></span><strong class="num">{{ n }}</strong></div>{% endfor %}</div>
+      </div>
+      <div class="divider"></div>
+      {% for r in reviews %}
+        <article class="review">
+          <div class="row between row-wrap">
+            <div class="row"><span class="avatar" style="width:32px;height:32px">{{ r.user|initials }}</span><div><strong class="ink">{{ r.user.first_name|default:'CarHub buyer' }}</strong>{% if r.verified_purchase %} <span class="badge badge-success">{% icon 'check' 11 %} Verified purchase</span>{% endif %}<div class="xs muted">{{ r.created_at|date:'j M Y' }}</div></div></div>
+            <span class="stars">{% for i in '12345' %}<svg class="icon {% if forloop.counter > r.rating %}off{% endif %}" width="15" height="15"><use href="#i-star"></use></svg>{% endfor %}</span>
+          </div>
+          {% if r.title %}<h4 class="mt-1 mb-0">{{ r.title }}</h4>{% endif %}
+          <p class="mt-1 mb-0">{{ r.body }}</p>
+        </article>
+      {% endfor %}
+    {% else %}
+      <p class="muted mt-1">No reviews yet. Bought this? Tell other drivers how it went.</p>
+    {% endif %}
+
+    {% if my_review and my_review.status != 'approved' %}
+      <div class="notice {% if my_review.status == 'rejected' %}danger{% else %}info{% endif %} mt-2">{% icon 'clock' 18 %}<div class="small">{% if my_review.status == 'pending' %}<strong>Your review is awaiting moderation.</strong>{% else %}<strong>Your review wasn't published.</strong> {{ my_review.moderation_note }}{% endif %}</div></div>
+    {% endif %}
+    {% if can_review %}
+      <div class="divider"></div>
+      <details class="review-compose" {% if my_review %}{% else %}{% endif %}>
+        <summary class="btn">{% icon 'star' 16 %} {% if my_review %}Edit your review{% else %}Write a review{% endif %}</summary>
+        <form method="post" action="{% url 'cas:review' p.slug %}" class="mt-2" novalidate>
+          {% csrf_token %}
+          <div class="star-input" role="radiogroup" aria-label="Your rating">
+            {% for n in '54321' %}<input type="radio" id="pr-{{ n }}" name="rating" value="{{ n }}" {% if my_review.rating|stringformat:'s' == n %}checked{% endif %}><label for="pr-{{ n }}" title="{{ n }} star{{ n|pluralize }}"><svg class="icon" width="28" height="28"><use href="#i-star"></use></svg></label>{% endfor %}
+          </div>
+          <div class="field"><label for="rv-title">Headline</label><input class="input" id="rv-title" name="title" maxlength="120" value="{{ my_review.title|default:'' }}" placeholder="e.g. Perfect fit on my 2016 Corolla"></div>
+          <div class="field"><label for="rv-body">Your review</label><textarea class="input" id="rv-body" name="body" rows="4" required minlength="10">{{ my_review.body|default:'' }}</textarea></div>
+          <button class="btn btn-dark">Submit review</button>
+        </form>
+      </details>
+    {% elif not user.is_authenticated %}
+      <div class="divider"></div>
+      <a class="btn" href="{% url 'account_login' %}?next={{ request.path|urlencode }}%23reviews">Sign in to write a review</a>
+    {% endif %}
+  </section>
+
+  {% if related %}
+  <section class="section" style="padding-top:32px">
+    <div class="section-head"><div><h2>More {{ p.category.name|lower }}</h2></div><a class="link-arrow" href="{{ p.category.get_absolute_url }}">See all {% icon 'arrow-right' 18 %}</a></div>
+    <div class="parts-grid rail">{% for p in related %}{% include 'cas/_product_card.html' %}{% endfor %}</div>
+  </section>
+  {% endif %}
+</div>
+
+{% if p.in_stock %}
+<div class="sticky-buy pdp-sticky">
+  <div><div class="small muted">{{ p.name|truncatechars:34 }}</div><strong class="price">{{ p.price|naira }}</strong></div>
+  <form method="post" action="{% url 'cas:cart_add' p.pk %}">{% csrf_token %}<button class="btn btn-primary" name="buy_now" value="1">Buy now</button></form>
+</div>
+{% endif %}
+
+<div class="lightbox" id="lightbox" aria-hidden="true">
+  <button type="button" class="lb-close icon-btn" aria-label="Close">{% icon 'x' 26 %}</button>
+  {% if images|length > 1 %}<button type="button" class="gallery-nav prev" data-gallery-prev aria-label="Previous">{% icon 'chevron-left' 24 %}</button>{% endif %}
+  <img src="{{ p.primary_image }}" alt="{{ p.name }}" referrerpolicy="no-referrer">
+  {% if images|length > 1 %}<button type="button" class="gallery-nav next" data-gallery-next aria-label="Next">{% icon 'chevron-right' 24 %}</button>{% endif %}
+  <div class="lb-caption"></div>
+</div>
+{% endwith %}
+{% endblock %}
+{% block body_class %}has-sticky-buy{% endblock %}

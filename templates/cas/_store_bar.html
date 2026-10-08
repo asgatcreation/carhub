@@ -1,0 +1,23 @@
+{# Secondary navigation shown on every parts-store page. #}
+<div class="store-bar">
+  <div class="container store-bar-inner">
+    <a class="store-name" href="{% url 'cas:home' %}">{% icon 'wrench' 18 %}<span>Parts <em>&amp;</em> accessories</span></a>
+    <form class="store-search" action="{% url 'cas:shop' %}" method="get" role="search">
+      {% icon 'search' 17 %}
+      <label class="sr-only" for="store-q">Search parts</label>
+      <input id="store-q" type="search" name="q" placeholder="Search parts, brands or part numbers" value="{{ request.GET.q|default:'' }}">
+      {% if vehicle %}<input type="hidden" name="fits" value="on">{% endif %}
+    </form>
+    <div class="store-actions">
+      <button type="button" class="my-car-chip {% if vehicle %}is-set{% endif %}" data-drawer-open="garage-drawer">
+        {% icon 'car' 17 %}<span>{% if vehicle %}{{ vehicle_label }}{% else %}Add my car{% endif %}</span>{% icon 'chevron-down' 14 %}
+      </button>
+      {% if user.is_authenticated %}<a class="store-link hide-sm" href="{% url 'cas:orders' %}">{% icon 'receipt' 17 %}<span>Orders</span></a>{% endif %}
+      <a class="store-link store-cart" href="{% url 'cas:cart' %}" aria-label="Parts cart">
+        {% icon 'bag' 18 %}<span class="hide-sm">Cart</span>
+        <b data-parts-count {% if not parts_count %}hidden{% endif %}>{{ parts_count }}</b>
+      </a>
+    </div>
+  </div>
+</div>
+{% include 'cas/_garage_drawer.html' %}

@@ -7,7 +7,7 @@
 [![CI](https://github.com/asgatcreation/carhub/actions/workflows/ci.yml/badge.svg)](https://github.com/asgatcreation/carhub/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.13-3776AB?logo=python&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-5.2-0C4B33?logo=django&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-94%20passing-11845b)
+![Tests](https://img.shields.io/badge/tests-113%20passing-11845b)
 
 **[Live demo →](https://carhub-es73.onrender.com/)** &nbsp;·&nbsp; [Buyer journey](#the-buyer-journey) &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Run it locally](#run-it-locally) &nbsp;·&nbsp; [Architecture](#architecture)
 
@@ -51,6 +51,17 @@ Each step has a real status, notification and email behind it, from the deposit 
 | <img src="docs/screenshots/10-seller-storefront.jpg" alt="Seller storefront"> | <img src="docs/screenshots/14-dark-mode.jpg" alt="Dark mode"> |
 | **Seller storefront.** A public page with stats, inventory filtered by brand and sorted, recently sold cars, rating breakdowns and reviews. | **Dark mode.** Follows the system setting, with a toggle that remembers the visitor's choice. Built on the same design tokens. |
 
+### Parts & accessories store
+
+| | |
+| :-- | :-- |
+| <img src="docs/screenshots/17-parts-store.jpg" alt="Parts store home"> | <img src="docs/screenshots/18-parts-shop.jpg" alt="Shop filtered to parts that fit"> |
+| **Shop for your car.** Buyers save their car (make, model and year) once, and every product shows a "Fits your Camry" or "Doesn't fit" badge. Car pages link straight to parts made for that car. | **Filter to what fits.** One switch narrows the catalogue to compatible parts, alongside filters for category, brand, genuine or aftermarket, price, stock and deals. |
+| <img src="docs/screenshots/19-part-fits.jpg" alt="Product page with fit check"> | <img src="docs/screenshots/20-vendor-orders.jpg" alt="Vendor orders to ship"> |
+| **Product page.** Fit check, live stock, quantity, delivery and payment options, specs, a compatible-cars list and moderated reviews marked "verified purchase". | **Vendor dashboard.** Approved vendors manage products, stock and visibility, and fulfil orders: pick a courier, mark shipped then delivered, or cancel with a reason (stock is restored and the buyer refunded). |
+
+Checkout is paid in full by Paystack, the demo payment, or **pay on delivery** in Lagos and Abuja. Delivery is priced by state and free over ₦100,000, or buyers can collect from the vendor. Stock rows are locked when an order is placed, so items can't be oversold. Every new or edited product is checked in the admin console before it goes live.
+
 ### Admin console: everything public is checked first
 
 | | |
@@ -85,6 +96,14 @@ Every screen is designed for a 390px-wide phone first. Car sections become swipe
 - A dashboard with views, saves and enquiries; a reservations inbox for scheduling inspections and completing sales.
 - A public storefront with ratings broken down by category.
 
+**Parts store**
+- Catalogue in 11 categories with brands, specs, part numbers, warranty and genuine / aftermarket labels.
+- "My garage" fitment matching: each product lists the cars it fits, and the store filters and badges by the buyer's car.
+- Guest cart that merges on sign-in, with quantity capped by stock and a free-delivery progress bar.
+- Checkout with delivery or pickup and fees by state; Paystack, demo payment or pay on delivery.
+- Per-item order tracking (preparing → shipped → delivered), cancellation with restock and refund, and moderated, rated reviews.
+- Vendor onboarding through verification, a vendor dashboard and a fulfilment queue.
+
 **Staff**
 - A front-end admin console (`/staff/`) with its own branded sign-in, dark sidebar and live queue counts.
 - Pre-publication moderation of listings from new sellers and of every buyer review; spot checks of new photos; verification of dealers, drivers and accessory vendors (approve, reject or request changes).
@@ -106,7 +125,7 @@ Every screen is designed for a 390px-wide phone first. Car sections become swipe
 | Frontend | Server-rendered templates, a hand-written CSS design system (tokens, dark theme), vanilla JS with progressive enhancement |
 | Data | SQLite locally, Postgres via `DATABASE_URL` |
 | Hosting | Render (daphne ASGI), WhiteNoise static files |
-| Quality | 94 automated tests, GitHub Actions CI on Python 3.12 and 3.13 |
+| Quality | 113 automated tests, GitHub Actions CI on Python 3.12 and 3.13 |
 
 ## Architecture
 
@@ -120,7 +139,10 @@ cars/              catalogue, search, cart, wishlist, checkout, orders, reservat
 users/             custom user (email login), profiles, chat, notifications, seller verification
   adapter.py       numeric one-time codes, email context
 templates/emails/  responsive HTML email layout used by every email
-cas/, driverzone/  scaffolding for the upcoming Accessories store and Hire-a-driver
+cas/               parts & accessories store: catalogue, fitment, cart, checkout, orders, vendors, reviews
+  services.py      cart, garage, delivery pricing, order creation with stock locking, fulfilment
+  seed/            demo catalogue + curated product-photo credits (part_photos.json)
+driverzone/        scaffolding for the upcoming Hire-a-driver section
 ```
 
 Decisions worth calling out:
@@ -153,6 +175,7 @@ All demo accounts use the password `CarHubDemo!2026`, and the sign-in page offer
 | --- | --- | --- |
 | Buyer | `buyer@carhub.demo` | Orders at every stage, saved cars, checkout, messages |
 | Verified dealer | `harborpoint@carhub.demo` | Reservations to confirm, a scheduled inspection, completed and cancelled sales |
+| Parts vendor | `ladipoparts@carhub.demo` | Vendor dashboard, stock, orders to ship |
 | Moderator (staff) | `moderator@carhub.demo` | Admin console at `/staff/`: listings, reviews, photos, verifications |
 
 The moderator is deliberately **not** a superuser. To restore fresh demo data, run `python manage.py seed_demo --reset`.
@@ -177,7 +200,7 @@ The moderator is deliberately **not** a superuser. To restore fresh demo data, r
 python manage.py test
 ```
 
-94 tests cover:
+113 tests cover:
 - Search and filters, moderation visibility and price insight.
 - The guest → sign-in → checkout hand-off and the cart merge.
 - Each checkout step: date validation, the locked email, exact totals, demo and mocked Paystack payments, and a car reserved by someone else mid-checkout.
@@ -186,7 +209,6 @@ python manage.py test
 
 ## Roadmap
 
-- **Accessories store (CAS):** parts and accessories from verified vendors, matched to the buyer's car (next up)
 - Hire-a-driver (DriverZone)
 - Persistent Postgres + Cloudinary uploads for the hosted demo
 - Saved searches with email alerts, and side-by-side comparison
@@ -194,4 +216,4 @@ python manage.py test
 ## Credits
 
 Designed and built by **Akanji Oluwaseun Gabriel** ([@asgatcreation](https://github.com/asgatcreation)).
-Vehicle photos: [Wikimedia Commons](https://commons.wikimedia.org/) contributors under Creative Commons or public-domain licences, credited on each listing.
+Vehicle and product photos: [Wikimedia Commons](https://commons.wikimedia.org/) contributors under Creative Commons or public-domain licences, credited on each listing and product.

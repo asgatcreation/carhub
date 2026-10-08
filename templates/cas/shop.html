@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block title %}{% if category %}{{ category.name }}{% else %}Shop parts &amp; accessories{% endif %} | CarHub{% endblock %}
+{% block content %}
+{% include 'cas/_store_bar.html' %}
+
+<div class="page-head">
+  <div class="container">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="{% url 'cas:home' %}">Parts &amp; accessories</a>{% icon 'chevron-right' 14 %}<span>{% if category %}{{ category.name }}{% else %}All parts{% endif %}</span></nav>
+    <h1>{% if category %}{{ category.name }}{% elif f.q %}Results for “{{ f.q }}”{% else %}All parts &amp; accessories{% endif %}</h1>
+    <p class="muted mb-0">{% if category.blurb %}{{ category.blurb }} · {% endif %}<strong class="num ink">{{ total }}</strong> item{{ total|pluralize }}{% if f.fits and vehicle %} that fit your <strong class="ink">{{ vehicle_label }}</strong>{% endif %}</p>
+  </div>
+</div>
+
+<div class="container browse-layout">
+  <form class="filters" id="filter-form" method="get" action="{% if category %}{{ category.get_absolute_url }}{% else %}{% url 'cas:shop' %}{% endif %}" aria-label="Filters">
+    <div class="filters-head">
+      <h3>{% icon 'sliders' 18 %} Filters</h3>
+      <div class="row">
+        <a href="{% if category %}{{ category.get_absolute_url }}{% else %}{% url 'cas:shop' %}{% endif %}" class="link small">Clear all</a>
+        <button type="button" class="icon-btn filters-close" data-drawer-close aria-label="Close filters">{% icon 'x' 20 %}</button>
+      </div>
+    </div>
+    {% if f.q %}<input type="hidden" name="q" value="{{ f.q }}">{% endif %}
+    {% if sort != 'popular' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+
+    <div class="filter-group fit-filter">
+      <h4>My car</h4>
+      {% if vehicle %}
+        <label class="switch-row"><input type="checkbox" name="fits" {% if f.fits %}checked{% endif %}><span class="switch"></span><span>Only parts that fit my <strong>{{ vehicle_label }}</strong></span></label>
+        <button type="button" class="link-btn small mt-1" data-drawer-open="garage-drawer">Change car</button>
+      {% else %}
+        <p class="small muted mt-0 mb-1">Add your car to see what fits.</p>
+        <button type="button" class="btn btn-sm btn-block" data-drawer-open="garage-drawer">{% icon 'car' 16 %} Add my car</button>
+      {% endif %}
+    </div>
+
+    {% if not category %}
+    <div class="filter-group">
+      <h4>Category</h4>
+      <div class="brand-list">
+        <label><input type="radio" name="category" value="" {% if not f.category %}checked{% endif %}> All categories</label>
+        {% for c in categories %}{% if c.n %}<label><input type="radio" name="category" value="{{ c.slug }}" {% if f.category == c.slug %}checked{% endif %}> {{ c.name }} <span class="count">{{ c.n }}</span></label>{% endif %}{% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="filter-group">
+      <h4>Price (₦)</h4>
+      <div class="range-pair">
+        <div class="field"><label class="sr-only" for="min_price">Minimum</label><input class="input" type="number" id="min_price" name="min_price" placeholder="Min" min="0" step="1000" value="{{ f.min_price|default_if_none:'' }}"></div>
+        <div class="field"><label class="sr-only" for="max_price">Maximum</label><input class="input" type="number" id="max_price" name="max_price" placeholder="Max" min="0" step="1000" value="{{ f.max_price|default_if_none:'' }}"></div>
+      </div>
+      <div class="row row-wrap mt-1" style="gap:6px">
+        <a class="badge" href="{% url_replace max_price=20000 min_price='' page='' %}">Under ₦20k</a>
+        <a class="badge" href="{% url_replace min_price=20000 max_price=100000 page='' %}">₦20k–100k</a>
+        <a class="badge" href="{% url_replace min_price=100000 max_price='' page='' %}">₦100k+</a>
+      </div>
+      <button type="submit" class="btn btn-sm btn-block mt-2 hide-sm">Apply price</button>
+    </div>
+
+    <div class="filter-group">
+      <h4>Type</h4>
+      <div class="seg">
+        <label><input type="radio" name="part_type" value="" {% if not f.part_type %}checked{% endif %}><span>Any</span></label>
+        <label><input type="radio" name="part_type" value="genuine" {% if f.part_type == 'genuine' %}checked{% endif %}><span>Genuine (OEM)</span></label>
+        <label><input type="radio" name="part_type" value="aftermarket" {% if f.part_type == 'aftermarket' %}checked{% endif %}><span>Aftermarket</span></label>
+        <label><input type="radio" name="part_type" value="accessory" {% if f.part_type == 'accessory' %}checked{% endif %}><span>Accessory</span></label>
+      </div>
+    </div>
+
+    {% if brand_facets %}
+    <div class="filter-group">
+      <h4>Brand</h4>
+      <div class="brand-list">
+        <label><input type="radio" name="brand" value="" {% if not f.brand %}checked{% endif %}> All brands</label>
+        {% for b in brand_facets %}{% if b.brand__slug %}<label><input type="radio" name="brand" value="{{ b.brand__slug }}" {% if f.brand == b.brand__slug %}checked{% endif %}> {{ b.brand__name }} <span class="count">{{ b.n }}</span></label>{% endif %}{% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="filter-group">
+      <h4>Availability</h4>
+      <label class="check"><input type="checkbox" name="in_stock" {% if f.in_stock %}checked{% endif %}> <span>In stock only</span></label>
+      <label class="check mt-1"><input type="checkbox" name="on_sale" {% if f.on_sale %}checked{% endif %}> <span>On sale</span></label>
+    </div>
+
+    <div class="filters-foot"><button type="submit" class="btn btn-dark btn-block">Show results</button></div>
+  </form>
+
+  <section aria-label="Results">
+    {% if vehicle and not f.fits %}
+      <div class="fit-banner">{% icon 'car' 18 %}<span>You're shopping for a <strong>{{ vehicle_label }}</strong>.</span><a class="btn btn-sm btn-dark" href="{% url_replace fits='on' page='' %}">Show only parts that fit</a></div>
+    {% elif not vehicle %}
+      <div class="fit-banner muted-banner">{% icon 'info' 18 %}<span>Add your car to see which parts fit.</span><button type="button" class="btn btn-sm" data-drawer-open="garage-drawer">{% icon 'car' 16 %} Add my car</button></div>
+    {% endif %}
+    <div class="results-bar">
+      <button type="button" class="btn btn-sm filters-toggle" data-drawer-open="filter-form">{% icon 'sliders' 18 %} Filters</button>
+      <span class="muted small hide-sm">{% if page_obj.paginator.count %}Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}{% endif %}</span>
+      <form class="sort" method="get">
+        {% for key, values in request.GET.lists %}{% if key != 'sort' and key != 'page' %}{% for v in values %}<input type="hidden" name="{{ key }}" value="{{ v }}">{% endfor %}{% endif %}{% endfor %}
+        <label for="sort-select" class="small muted">Sort by</label>
+        <select id="sort-select" name="sort" class="input" data-autosubmit>
+          {% for value, label in form.fields.sort.choices %}<option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </form>
+    </div>
+
+    {% if page_obj.object_list %}
+      <div class="parts-grid">{% for p in page_obj %}{% include 'cas/_product_card.html' %}{% endfor %}</div>
+      {% include 'partials/pagination.html' with page=page_obj %}
+    {% else %}
+      <div class="empty">
+        <div class="empty-icon">{% icon 'search' 28 %}</div>
+        <h3>Nothing matches yet</h3>
+        <p>{% if f.fits %}We don't have that for your {{ vehicle_label }} right now. Try all parts, or a different category.{% else %}Try a different search or remove a filter.{% endif %}</p>
+        <a href="{% url 'cas:shop' %}" class="btn btn-dark">Browse all parts</a>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

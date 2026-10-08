@@ -23,10 +23,10 @@ def _headers():
 
 
 def initialize(order, callback_url):
-    """Start a Paystack checkout for the order's deposit; returns the hosted payment URL."""
+    """Start a Paystack checkout for what the order owes now; returns the hosted payment URL."""
     payload = {
         'email': order.email,
-        'amount': int(order.deposit_total * 100),  # kobo
+        'amount': int(order.amount_due * 100),  # kobo: the deposit for cars, the full total for parts
         'currency': 'NGN',
         'reference': f'{order.number}-{order.pk}',
         'callback_url': callback_url,

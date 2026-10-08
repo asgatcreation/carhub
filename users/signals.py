@@ -75,3 +75,5 @@ def merge_session_cart(sender, request, user, **kwargs):
     """Move a guest's session cart and wishlist into their account after login."""
     from cars.services import merge_session_into_account
     merge_session_into_account(request, user)
+    from cas.services import merge_session_into_account as merge_parts
+    merge_parts(request, user)

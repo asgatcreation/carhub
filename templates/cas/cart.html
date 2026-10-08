@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block title %}Your parts cart | CarHub{% endblock %}
+{% block content %}
+{% include 'cas/_store_bar.html' %}
+<div class="container section" style="padding-top:28px">
+  <div class="row between row-wrap mb-2">
+    <div><h1 class="mb-0" style="font-size:clamp(1.6rem,3vw,2.1rem)">Your cart</h1>
+      <p class="muted mb-0">{% if lines %}{{ summary.items }} item{{ summary.items|pluralize }}{% else %}Nothing here yet{% endif %}</p></div>
+    <a class="link-arrow" href="{% url 'cas:shop' %}">{% icon 'arrow-left' 18 %} Keep shopping</a>
+  </div>
+
+  {% if lines %}
+  <div class="checkout-layout">
+    <div>
+      {% if summary.to_free_delivery > 0 %}
+        <div class="free-ship" style="--pct:{% widthratio summary.subtotal summary.free_delivery_from 100 %}%">
+          {% icon 'truck' 18 %}<span>Add <strong data-free-gap>{{ summary.to_free_delivery|naira }}</strong> more for <strong>free delivery</strong></span>
+          <i></i>
+        </div>
+      {% else %}
+        <div class="free-ship done">{% icon 'check-circle' 18 %}<span>You've unlocked <strong>free delivery</strong></span></div>
+      {% endif %}
+
+      <div class="card cart-lines">
+        {% for p, qty, total in lines %}
+          <div class="cart-line" data-cart-line>
+            <a class="cl-img" href="{{ p.get_absolute_url }}"><img src="{{ p.thumbnail }}" alt="" referrerpolicy="no-referrer"></a>
+            <div class="cl-info">
+              <div class="xs muted">{{ p.brand.name|default:p.category.name }}</div>
+              <a class="cl-name" href="{{ p.get_absolute_url }}">{{ p.name }}</a>
+              <div class="cl-meta">
+                {% with fit=p|fits_garage:vehicle %}{% if fit is True %}<span class="fit-badge fits inline">{% icon 'check' 11 %} Fits your {{ vehicle.model }}</span>{% elif fit is False %}<span class="fit-badge nofit inline">Doesn't fit your {{ vehicle.model }}</span>{% endif %}{% endwith %}
+                <span class="xs muted">Sold by {{ p.vendor.profile.company_name|default:p.vendor.get_full_name }}</span>
+              </div>
+              {% if p.low_stock %}<div class="xs" style="color:var(--warning)">Only {{ p.stock }} left</div>{% endif %}
+            </div>
+            <form method="post" action="{% url 'cas:cart_update' p.pk %}" class="cl-qty" data-cart-qty>
+              {% csrf_token %}
+              <div class="qty-stepper sm" data-qty>
+                <button type="button" data-qty-dec aria-label="Fewer">{% icon 'minus' 14 %}</button>
+                <input type="number" name="quantity" value="{{ qty }}" min="0" max="{% if p.stock < 10 %}{{ p.stock }}{% else %}10{% endif %}" aria-label="Quantity of {{ p.name }}">
+                <button type="button" data-qty-inc aria-label="More">{% icon 'plus' 14 %}</button>
+              </div>
+              <noscript><button class="btn btn-sm">Update</button></noscript>
+            </form>
+            <div class="cl-price">
+              <strong data-line-total data-unit="{{ p.price }}">{{ total|naira }}</strong>
+              {% if qty > 1 %}<small class="muted">{{ p.price|naira }} each</small>{% endif %}
+              <form method="post" action="{% url 'cas:cart_update' p.pk %}">{% csrf_token %}<input type="hidden" name="quantity" value="0"><button class="link-btn muted small">Remove</button></form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <aside class="checkout-aside">
+      <div class="card card-pad summary-card">
+        <h3>Order summary</h3>
+        <dl class="sum-rows">
+          <div><dt>Items ({{ summary.items }})</dt><dd data-subtotal>{{ summary.subtotal|naira }}</dd></div>
+          {% if summary.savings %}<div class="saving"><dt>You save</dt><dd>−{{ summary.savings|naira }}</dd></div>{% endif %}
+          <div><dt>Delivery</dt><dd class="muted">{% if summary.to_free_delivery == 0 %}Free{% else %}From ₦2,500 · set at checkout{% endif %}</dd></div>
+        </dl>
+        <div class="sum-total"><span>Total so far</span><strong data-total>{{ summary.subtotal|naira }}</strong></div>
+        <a class="btn btn-primary btn-lg btn-block mt-2" href="{% url 'cas:checkout' %}">{% if user.is_authenticated %}Checkout{% else %}Sign in to check out{% endif %} {% icon 'arrow-right' 18 %}</a>
+        <ul class="pdp-perks small mt-2">
+          <li>{% icon 'card' 16 %}<span>Card, transfer, USSD or pay on delivery (Lagos &amp; Abuja)</span></li>
+          <li>{% icon 'box' 16 %}<span>Cancel any item before it ships for a full refund</span></li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+  {% else %}
+    <div class="empty">
+      <div class="empty-icon">{% icon 'bag' 28 %}</div>
+      <h3>Your parts cart is empty</h3>
+      <p>Find tyres, batteries, oil and more that fit your car.</p>
+      <a href="{% url 'cas:shop' %}{% if vehicle %}?fits=on{% endif %}" class="btn btn-dark">Shop parts</a>
+    </div>
+  {% endif %}
+
+  {% if suggestions %}
+    <section class="section" style="padding-bottom:0">
+      <div class="section-head"><div><h2>Handy for any car</h2></div></div>
+      <div class="parts-grid rail">{% for p in suggestions %}{% include 'cas/_product_card.html' %}{% endfor %}</div>
+    </section>
+  {% endif %}
+</div>
+{% endblock %}

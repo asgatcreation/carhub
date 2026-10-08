@@ -1,0 +1,60 @@
+{% extends 'staff/base.html' %}
+{% block console_title %}Products{% endblock %}
+{% block crumb %} / Review queues{% endblock %}
+{% block heading %}Parts store products{% endblock %}
+{% block account_content %}
+<p class="muted mt-0">New and edited products from vendors stay hidden until a moderator approves them. Vendors are notified either way.</p>
+<div class="tabs-nav">
+  <a href="?status=pending" class="{% if status == 'pending' %}is-active{% endif %}">Awaiting <span class="badge" data-mod-count="pending">{{ counts.pending|default:0 }}</span></a>
+  <a href="?status=approved" class="{% if status == 'approved' %}is-active{% endif %}">Live <span class="badge" data-mod-count="approved">{{ counts.approved|default:0 }}</span></a>
+  <a href="?status=rejected" class="{% if status == 'rejected' %}is-active{% endif %}">Rejected <span class="badge" data-mod-count="rejected">{{ counts.rejected|default:0 }}</span></a>
+</div>
+
+{% for p in items %}
+  <article class="card mod-card" data-mod-item>
+    <div class="mod-photos">
+      {% for img in p.images.all|slice:':3' %}<a href="{{ img.src }}" target="_blank" rel="noopener"><img src="{{ img.src }}" alt="Photo {{ forloop.counter }}" loading="lazy" referrerpolicy="no-referrer"></a>{% empty %}<div class="empty-icon" style="margin:auto">{% icon 'image' 26 %}</div>{% endfor %}
+    </div>
+    <div class="mod-body">
+      <div class="row between row-wrap" style="align-items:flex-start">
+        <div>
+          <div class="xs subtle">{{ p.category.name }}{% if p.brand %} · {{ p.brand.name }}{% endif %} · {{ p.get_part_type_display }}</div>
+          <h3 style="margin:2px 0 0"><a href="{{ p.get_absolute_url }}" target="_blank" rel="noopener">{{ p.name }}</a></h3>
+          <div class="small muted">submitted {{ p.updated_at|ago }}{% if p.sku %} · part no. {{ p.sku }}{% endif %}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="price" style="font-size:1.25rem">{{ p.price|naira }}</div>
+          {% if p.on_sale %}<s class="small muted">{{ p.compare_at_price|naira }}</s>{% endif %}
+        </div>
+      </div>
+      <div class="mod-facts">
+        <div><small>Stock</small><strong>{{ p.stock }}</strong></div>
+        <div><small>Warranty</small><strong>{% if p.warranty_months %}{{ p.warranty_months }} mo{% else %}None{% endif %}</strong></div>
+        <div><small>Ships in</small><strong>{{ p.dispatch_days }} day{{ p.dispatch_days|pluralize }}</strong></div>
+        <div><small>Fits</small><strong>{% if p.universal_fit %}Any car{% else %}{{ p.fitments.all|length }} range{{ p.fitments.all|length|pluralize }}{% endif %}</strong></div>
+      </div>
+      {% if not p.universal_fit and p.fitments.all %}<div class="row row-wrap" style="gap:6px">{% for f in p.fitments.all|slice:':6' %}<span class="badge">{{ f.label }}</span>{% endfor %}{% if p.fitments.all|length > 6 %}<span class="badge">+{{ p.fitments.all|length|add:-6 }} more</span>{% endif %}</div>{% endif %}
+      <div class="row row-wrap" style="gap:12px">
+        <span class="avatar" style="width:34px;height:34px">{{ p.vendor|initials }}</span>
+        <div class="grow small"><strong class="ink">{{ p.vendor.profile.company_name|default:p.vendor.get_full_name }}</strong> <span class="badge badge-info">{% icon 'verified' 12 %} Vendor</span><div class="muted xs">{{ p.vendor.email }}</div></div>
+      </div>
+      <div class="checks">{% for ok, label in p.checks %}<span class="badge {% if ok %}badge-success{% else %}badge-warning{% endif %}">{% if ok %}{% icon 'check' 12 %}{% else %}{% icon 'alert' 12 %}{% endif %} {{ label }}</span>{% endfor %}</div>
+      <p class="small muted mb-0" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">{{ p.description }}</p>
+      {% if p.moderation_note %}<div class="notice danger small">{% icon 'info' 16 %}<div>Moderator note: {{ p.moderation_note }}</div></div>{% endif %}
+      {% if status == 'pending' %}
+        <form method="post" action="{% url 'staff:product_decide' p.pk %}" data-moderate>
+          {% csrf_token %}
+          <div class="reason-chips mb-1">{% for r in reasons %}<button type="button" data-reason="{{ r }}">{{ r }}</button>{% endfor %}</div>
+          <div class="row row-wrap">
+            <input class="input grow" name="reason" placeholder="Note to the vendor (required to reject)" style="min-width:220px" maxlength="300">
+            <button name="decision" value="reject" class="btn btn-danger">Reject</button>
+            <button name="decision" value="approve" class="btn btn-dark">{% icon 'check' 16 %} Approve</button>
+          </div>
+        </form>
+      {% endif %}
+    </div>
+  </article>
+{% empty %}
+  <div class="empty"><div class="empty-icon">{% icon 'check-circle' 28 %}</div><h3>All caught up</h3><p>No {{ status }} products right now.</p></div>
+{% endfor %}
+{% endblock %}

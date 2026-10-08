@@ -15,6 +15,7 @@
       <a href="{% url 'staff:overview' %}" class="{% if section == 'overview' %}is-active{% endif %}">{% icon 'dashboard' 18 %}<span>Overview</span></a>
       <div class="console-label">Review queues</div>
       <a href="{% url 'cars:moderation' %}" class="{% if section == 'listings' %}is-active{% endif %}">{% icon 'car' 18 %}<span>Listings</span>{% if queue.listings %}<b>{{ queue.listings }}</b>{% endif %}</a>
+      <a href="{% url 'staff:products' %}" class="{% if section == 'products' %}is-active{% endif %}">{% icon 'box' 18 %}<span>Products</span>{% if queue.products %}<b>{{ queue.products }}</b>{% endif %}</a>
       <a href="{% url 'staff:reviews' %}" class="{% if section == 'reviews' %}is-active{% endif %}">{% icon 'star' 18 %}<span>Reviews</span>{% if queue.reviews %}<b>{{ queue.reviews }}</b>{% endif %}</a>
       <a href="{% url 'staff:photos' %}" class="{% if section == 'photos' %}is-active{% endif %}">{% icon 'image' 18 %}<span>Photos</span>{% if queue.photos %}<b>{{ queue.photos }}</b>{% endif %}</a>
       <a href="{% url 'staff:verifications' %}" class="{% if section == 'verifications' %}is-active{% endif %}">{% icon 'verified' 18 %}<span>Verifications</span>{% if queue.verifications %}<b>{{ queue.verifications }}</b>{% endif %}</a>

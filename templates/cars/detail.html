@@ -257,6 +257,16 @@
   </aside>
 </div>
 
+{% if parts_for_car.items %}
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="section-head"><div><span class="eyebrow">{% icon 'wrench' 14 %} Parts &amp; accessories</span><h2>Made for the {{ car.year }} {{ car.brand }} {{ car.model }}</h2><p>Guaranteed-fit parts from verified vendors, delivered across Nigeria.</p></div>
+      <form method="post" action="{% url 'cas:garage_set' %}">{% csrf_token %}<input type="hidden" name="make" value="{{ car.brand }}"><input type="hidden" name="model" value="{{ car.model }}"><input type="hidden" name="year" value="{{ car.year }}"><input type="hidden" name="next" value="{% url 'cas:shop' %}"><button class="link-arrow link-btn">Shop all parts for this car {% icon 'arrow-right' 18 %}</button></form></div>
+    {% with vehicle=parts_for_car.vehicle %}<div class="parts-grid rail">{% for p in parts_for_car.items %}{% include 'cas/_product_card.html' %}{% endfor %}</div>{% endwith %}
+  </div>
+</section>
+{% endif %}
+
 {% if similar %}
 <section class="section" style="padding-top:0">
   <div class="container">

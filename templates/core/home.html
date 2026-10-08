@@ -154,6 +154,23 @@
   </div>
 </section>
 
+{% if parts.items %}
+<section class="section" style="padding-top:0" data-reveal>
+  <div class="container">
+    <div class="parts-promo">
+      <div class="pp-copy">
+        <span class="eyebrow">{% icon 'wrench' 14 %} New · Parts &amp; accessories</span>
+        <h2>Parts that fit your car, delivered.</h2>
+        <p>{{ parts.count }} genuine and aftermarket parts from verified vendors. Tell us your car and we'll only show what fits.</p>
+        <div class="row row-wrap" style="gap:8px">{% for c in parts.categories %}<a class="pp-chip" href="{{ c.get_absolute_url }}">{% icon c.icon 15 %} {{ c.name }}</a>{% endfor %}</div>
+        <a class="btn btn-primary mt-2" href="{% url 'cas:home' %}">Shop parts {% icon 'arrow-right' 18 %}</a>
+      </div>
+      <div class="parts-grid pp-grid">{% for p in parts.items %}{% include 'cas/_product_card.html' %}{% endfor %}</div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
 <section class="section" style="background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line)" data-reveal>
   <div class="container">
     <div class="section-head" style="justify-content:center;text-align:center">

@@ -410,6 +410,11 @@ class Order(models.Model):
     def get_absolute_url(self):
         return reverse('cars:order_detail', kwargs={'number': self.number})
 
+    @property
+    def amount_due(self):
+        """What the payment provider should charge now: the refundable deposit."""
+        return self.deposit_total
+
     def mark_paid(self, reference=''):
         """Idempotently mark the order paid and reserve its cars."""
         if self.status == 'paid':

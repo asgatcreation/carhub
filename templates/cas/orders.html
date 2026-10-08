@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}My parts orders | CarHub{% endblock %}
+{% block content %}
+{% include 'cas/_store_bar.html' %}
+<div class="container section" style="padding-top:28px;max-width:980px">
+  <div class="row between row-wrap mb-2">
+    <h1 class="mb-0" style="font-size:clamp(1.6rem,3vw,2.1rem)">Parts orders</h1>
+    <a class="btn btn-sm" href="{% url 'cars:orders' %}">{% icon 'car' 16 %} Car reservations</a>
+  </div>
+  {% for order in orders %}
+    <a class="card order-row" href="{{ order.get_absolute_url }}">
+      <div class="or-imgs">{% for item in order.items.all|slice:':3' %}<img src="{{ item.image_url }}" alt="" referrerpolicy="no-referrer">{% endfor %}</div>
+      <div class="grow">
+        <div class="row between row-wrap" style="gap:6px">
+          <strong class="ink">Order {{ order.number }}</strong>
+          {% include 'cas/_order_status.html' %}
+        </div>
+        <div class="small muted">{{ order.created_at|date:'j M Y' }} · {{ order.items.all|length }} item{{ order.items.all|length|pluralize }} · {{ order.get_payment_method_display }}</div>
+        <div class="small mt-1">{% for item in order.items.all|slice:':2' %}{{ item.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if order.items.all|length > 2 %} and more{% endif %}</div>
+      </div>
+      <strong class="or-total">{{ order.total|naira }}</strong>
+    </a>
+  {% empty %}
+    <div class="empty"><div class="empty-icon">{% icon 'box' 28 %}</div><h3>No parts orders yet</h3><p>When you buy parts, you'll track each delivery here.</p><a class="btn btn-dark" href="{% url 'cas:shop' %}">Shop parts</a></div>
+  {% endfor %}
+</div>
+{% endblock %}

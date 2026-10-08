@@ -257,7 +257,7 @@ ul.messagelist li.error { border-color: rgba(194, 38, 44, .25); }
 .ch-btn { display: inline-flex; align-items: center; padding: 12px 18px; border-radius: 12px; font-weight: 750; text-decoration: none; white-space: nowrap; }
 .ch-btn-primary:link, .ch-btn-primary:visited { background: var(--ch-brand); color: var(--ch-brand-ink); }
 .ch-btn-primary:hover { background: #f5a400; text-decoration: none; }
-.ch-queues { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 26px; }
+.ch-queues { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 26px; }
 .ch-queue { display: grid; gap: 2px; padding: 16px 18px; border-radius: var(--ch-radius); background: var(--ch-surface); border: 1px solid var(--ch-line); box-shadow: var(--ch-shadow); border-top: 3px solid var(--q); transition: transform .15s; }
 .ch-queue:hover { transform: translateY(-2px); text-decoration: none; }
 .ch-queue b { font-family: 'Bricolage Grotesque', var(--font-family-primary); font-size: 1.8rem; color: var(--body-loud-color); line-height: 1.1; }
@@ -313,3 +313,4 @@ a.addlink, a.changelink, a.viewlink { font-weight: 600; }
 .dashboard .colMS, .dashboard #content.colMS { margin-right: 0; }
 #toolbar #searchbar { width: 340px; max-width: 100%; }
 .dashboard #content-main { align-items: start; }
+.q-teal { --q: #14b8a6; }

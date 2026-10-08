@@ -19,6 +19,8 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from cars.models import Car, CarImage, OrderItem
+from cas.models import Product
+from cas.models import Review as PartReview
 from core.emails import send_branded
 from users.models import Application, Notification, Review
 
@@ -40,7 +42,8 @@ def queue_counts():
     """Numbers shown in the console sidebar and overview."""
     return {
         'listings': Car.objects.filter(approval_status='pending').count(),
-        'reviews': Review.objects.filter(status='pending').count(),
+        'products': Product.objects.filter(status='pending').count(),
+        'reviews': Review.objects.filter(status='pending').count() + PartReview.objects.filter(status='pending').count(),
         'photos': CarImage.objects.filter(reviewed_at__isnull=True, car__approval_status='approved').count(),
         'verifications': Application.objects.filter(status='pending').count(),
     }
@@ -112,33 +115,134 @@ def overview(request):
 
 # ---------------------------------------------------------------- reviews
 
+def _flag(r, text):
+    r.flags = []
+    if CONTACT_RE.search(text):
+        r.flags.append(('danger', 'Contains contact details or a link'))
+    if len(r.body) < 25:
+        r.flags.append(('warning', 'Very short'))
+    if r.title and r.title.isupper():
+        r.flags.append(('warning', 'Shouting'))
+
+
 @staff_member_required
 def reviews(request):
+    """Seller reviews and product reviews share one queue, switched by ?kind=."""
     status = request.GET.get('status', 'pending')
-    qs = (Review.objects.filter(status=status).select_related('reviewer', 'profile__user')
-          .order_by('created_at' if status == 'pending' else '-moderated_at'))[:50]
-    items = list(qs)
-    reviewer_ids = {r.reviewer_id for r in items if r.reviewer_id}
-    written = dict(Review.objects.filter(reviewer_id__in=reviewer_ids).values_list('reviewer').annotate(n=Count('id')))
-    bought = set(OrderItem.objects.filter(order__user_id__in=reviewer_ids, status='completed')
-                 .values_list('order__user_id', 'seller_id'))
-    for r in items:
-        text = f'{r.title} {r.body}'
-        r.flags = []
-        if CONTACT_RE.search(text):
-            r.flags.append(('danger', 'Contains contact details or a link'))
-        if len(r.body) < 25:
-            r.flags.append(('warning', 'Very short'))
-        if r.title and r.title.isupper():
-            r.flags.append(('warning', 'Shouting'))
-        r.verified_purchase = (r.reviewer_id, r.profile.user_id) in bought
-        r.reviewer_total = written.get(r.reviewer_id, 0)
+    kind = 'parts' if request.GET.get('kind') == 'parts' else 'sellers'
+    order = 'created_at' if status == 'pending' else '-moderated_at'
+    if kind == 'sellers':
+        items = list(Review.objects.filter(status=status).select_related('reviewer', 'profile__user').order_by(order)[:50])
+        reviewer_ids = {r.reviewer_id for r in items if r.reviewer_id}
+        written = dict(Review.objects.filter(reviewer_id__in=reviewer_ids).values_list('reviewer').annotate(n=Count('id')))
+        bought = set(OrderItem.objects.filter(order__user_id__in=reviewer_ids, status='completed')
+                     .values_list('order__user_id', 'seller_id'))
+        for r in items:
+            _flag(r, f'{r.title} {r.body}')
+            r.author = r.reviewer
+            r.subject_name = r.profile.display_name
+            r.subject_url = reverse('cars:seller_profile', args=[r.profile.user_id])
+            r.decide_url = reverse('staff:review_decide', args=[r.pk])
+            r.verified_purchase = (r.reviewer_id, r.profile.user_id) in bought
+            r.reviewer_total = written.get(r.reviewer_id, 0)
+            r.sub_scores = [('Communication', r.communication), ('Professionalism', r.professionalism),
+                            ('Punctuality', r.punctuality), ('Car as described', r.condition)]
+        counts = dict(Review.objects.values_list('status').annotate(n=Count('id')))
+    else:
+        items = list(PartReview.objects.filter(status=status).select_related('user', 'product').order_by(order)[:50])
+        written = dict(PartReview.objects.filter(user__in={r.user_id for r in items}).values_list('user').annotate(n=Count('id')))
+        for r in items:
+            _flag(r, f'{r.title} {r.body}')
+            r.author = r.user
+            r.subject_name = r.product.name
+            r.subject_url = r.product.get_absolute_url()
+            r.decide_url = reverse('staff:part_review_decide', args=[r.pk])
+            r.reviewer_total = written.get(r.user_id, 0)
+            r.sub_scores = []
+        counts = dict(PartReview.objects.values_list('status').annotate(n=Count('id')))
     return render(request, 'staff/reviews.html', {
-        'section': 'reviews', 'status': status, 'items': items,
-        'counts': dict(Review.objects.values_list('status').annotate(n=Count('id'))),
-        'reasons': ['Contains contact details or advertising', 'Not about a real purchase or inspection',
+        'section': 'reviews', 'status': status, 'kind': kind, 'items': items, 'counts': counts,
+        'pending_by_kind': {'sellers': Review.objects.filter(status='pending').count(),
+                            'parts': PartReview.objects.filter(status='pending').count()},
+        'reasons': ['Contains contact details or advertising', 'Not about a real purchase',
                     'Offensive or abusive language', 'Duplicate review'],
     })
+
+
+@staff_member_required
+@require_POST
+def part_review_decide(request, review_id):
+    review = get_object_or_404(PartReview.objects.select_related('user', 'product__vendor'), pk=review_id)
+    decision = request.POST.get('decision')
+    note = request.POST.get('reason', '').strip()[:300]
+    if decision not in ('approve', 'reject') or (decision == 'reject' and not note):
+        return HttpResponseBadRequest('decision and reason required')
+    review.status = 'approved' if decision == 'approve' else 'rejected'
+    review.moderated_by, review.moderated_at, review.moderation_note = request.user, timezone.now(), note
+    review.save(update_fields=['status', 'moderated_by', 'moderated_at', 'moderation_note'])
+    review.product.refresh_rating()
+    url = f'{review.product.get_absolute_url()}#reviews'
+    if decision == 'approve':
+        _notify(review.user, request.user, 'review_published', f'Your review of {review.product.name} is now live.',
+                url, 'Your review is published', 'See your review')
+        _notify(review.product.vendor, review.user, 'review_received',
+                f'{review.product.name} got a new {review.rating}-star review.', url, 'New product review', 'Read it')
+    else:
+        _notify(review.user, request.user, 'review_rejected',
+                f'Your review of {review.product.name} was not published: {note} You can edit and resubmit it.',
+                url, "Your review wasn't published", 'Edit review')
+    if _ajax(request):
+        return JsonResponse({'ok': True})
+    return redirect(f"{reverse('staff:reviews')}?kind=parts")
+
+
+# ---------------------------------------------------------------- parts store products
+
+@staff_member_required
+def products(request):
+    status = request.GET.get('status', 'pending')
+    qs = (Product.objects.filter(status=status).select_related('vendor__profile', 'category', 'brand')
+          .prefetch_related('images', 'fitments', 'specs')
+          .order_by('created_at' if status == 'pending' else '-moderated_at'))[:40]
+    items = list(qs)
+    for p in items:
+        photos = len(p.images.all())
+        fits = len(p.fitments.all())
+        p.checks = [
+            (photos >= 2, f'{photos} photo{"s" if photos != 1 else ""}'),
+            (p.universal_fit or fits > 0, 'Universal fit' if p.universal_fit else f'{fits} compatible car range{"s" if fits != 1 else ""}'),
+            (len(p.description) >= 80, 'Detailed description' if len(p.description) >= 80 else 'Short description'),
+            (bool(p.sku) or p.part_type == 'accessory', 'Part number given' if p.sku else 'No part number'),
+            (not CONTACT_RE.search(p.description), 'No contact details' if not CONTACT_RE.search(p.description) else 'Contact details in text'),
+        ]
+    return render(request, 'staff/products.html', {
+        'section': 'products', 'status': status, 'items': items,
+        'counts': dict(Product.objects.values_list('status').annotate(n=Count('id'))),
+        'reasons': ['Photos are not of the actual product', 'Fitment list is missing or unclear',
+                    'Price looks wrong', 'Contact details in the listing', 'Counterfeit or prohibited item'],
+    })
+
+
+@staff_member_required
+@require_POST
+def product_decide(request, product_id):
+    p = get_object_or_404(Product.objects.select_related('vendor'), pk=product_id)
+    decision = request.POST.get('decision')
+    note = request.POST.get('reason', '').strip()[:300]
+    if decision not in ('approve', 'reject') or (decision == 'reject' and not note):
+        return HttpResponseBadRequest('decision and reason required')
+    p.status = 'approved' if decision == 'approve' else 'rejected'
+    p.moderated_by, p.moderated_at, p.moderation_note = request.user, timezone.now(), note
+    p.save(update_fields=['status', 'moderated_by', 'moderated_at', 'moderation_note'])
+    if decision == 'approve':
+        _notify(p.vendor, request.user, 'product_approved', f'{p.name} is now live in the CarHub parts store.',
+                p.get_absolute_url(), 'Your product is live', 'View product')
+    else:
+        _notify(p.vendor, request.user, 'product_rejected', f'{p.name} was not approved: {note}',
+                reverse('cas:product_edit', args=[p.slug]), "Your product wasn't approved", 'Edit product')
+    if _ajax(request):
+        return JsonResponse({'ok': True})
+    return redirect('staff:products')
 
 
 @staff_member_required

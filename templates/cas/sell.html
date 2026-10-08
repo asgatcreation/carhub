@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}Sell parts on CarHub{% endblock %}
+{% block content %}
+{% include 'cas/_store_bar.html' %}
+<section class="store-hero sell-hero">
+  <div class="container" style="position:relative;z-index:1;max-width:860px;text-align:center;padding-block:64px 72px">
+    <span class="hero-pill" style="margin-inline:auto">{% icon 'wrench' 14 %} For parts dealers &amp; accessory shops</span>
+    <h1>Sell parts to drivers who<br><span class="hl">know exactly what they need.</span></h1>
+    <p class="lead" style="margin-inline:auto">Every buyer on CarHub tells us their car, so your listings show up as a guaranteed fit. List for free and get paid per order.</p>
+  </div>
+</section>
+
+<div class="container section" style="max-width:1080px">
+  <div class="grid grid-3 sell-steps">
+    <div class="card card-pad"><span class="step-num">1</span><h3>Apply once</h3><p class="muted mb-0">Tell us about your shop. We verify your ID or CAC within 2 working days.</p></div>
+    <div class="card card-pad"><span class="step-num">2</span><h3>List your parts</h3><p class="muted mb-0">Add photos, price, stock and the cars each part fits. Our team checks every listing before it goes live.</p></div>
+    <div class="card card-pad"><span class="step-num">3</span><h3>Ship &amp; get paid</h3><p class="muted mb-0">We notify you of each order. Pack it, mark it shipped, and the buyer can track it to their door.</p></div>
+  </div>
+
+  <div class="card mt-4" id="apply">
+    {% if not user.is_authenticated %}
+      <div class="card-pad text-center">
+        <h2>Ready to start?</h2>
+        <p class="muted">Create a free CarHub account or sign in, then complete a short application.</p>
+        <a class="btn btn-primary btn-lg" href="{% url 'account_signup' %}?next={% url 'cas:sell' %}%23apply">Create an account</a>
+        <a class="btn btn-lg" href="{% url 'account_login' %}?next={% url 'cas:sell' %}%23apply">Sign in</a>
+      </div>
+    {% elif application and application.status == 'pending' %}
+      <div class="card-pad"><div class="notice info">{% icon 'clock' 20 %}<div><strong>Your vendor application is in review.</strong> Submitted {{ application.applied_at|date:'j M Y' }}. We'll email you as soon as it's processed.</div></div></div>
+    {% else %}
+      {% if application and application.status == 'correction_requested' %}
+        <div class="notice warning m-2">{% icon 'alert' 20 %}<div><strong>We need a few changes.</strong> Check your notifications for details, then submit again below.</div></div>
+      {% elif application and application.status == 'rejected' %}
+        <div class="notice danger m-2">{% icon 'info' 20 %}<div>Your last application wasn't approved. You're welcome to apply again with updated details.</div></div>
+      {% endif %}
+      <form method="post" enctype="multipart/form-data" novalidate data-busy>
+        {% csrf_token %}
+        <div class="form-section">
+          <h3>{% icon 'wrench' 20 %} Your shop</h3>
+          <div class="form-grid">
+            {% include 'partials/field.html' with field=form.company_name %}
+            {% include 'partials/field.html' with field=form.experience_years %}
+            {% include 'partials/field.html' with field=form.full_name %}
+            {% include 'partials/field.html' with field=form.phone %}
+            <div class="span-2">{% include 'partials/field.html' with field=form.address %}</div>
+          </div>
+        </div>
+        <div class="form-section">
+          <h3>{% icon 'shield' 20 %} Verification</h3>
+          <p>Used only to verify you, never shown publicly.</p>
+          <div class="form-grid">
+            {% include 'partials/field.html' with field=form.id_type %}
+            {% include 'partials/field.html' with field=form.id_number %}
+            <div class="span-2">{% include 'partials/field.html' with field=form.documents %}</div>
+            <div class="span-2">{% include 'partials/field.html' with field=form.additional_info %}</div>
+          </div>
+        </div>
+        <div class="form-section row between row-wrap"><span class="small muted">Reviewed within 2 working days.</span><button class="btn btn-dark btn-lg">Submit application</button></div>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

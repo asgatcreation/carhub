@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Vendor dashboard | CarHub parts{% endblock %}
+{% block content %}
+{% include 'cas/_store_bar.html' %}
+<div class="container section" style="padding-top:28px">
+  {% include 'cas/_vendor_nav.html' with vendor_section='products' %}
+
+  <div class="vendor-kpis">
+    <div><small>Live products</small><strong>{{ stats.live }}</strong></div>
+    <div><small>Awaiting review</small><strong>{{ stats.review }}</strong></div>
+    <div class="{% if stats.low %}warn{% endif %}"><small>Low stock (≤5)</small><strong>{{ stats.low }}</strong></div>
+    <a href="{% url 'cas:vendor_orders' %}" class="{% if stats.to_ship %}hot{% endif %}"><small>Orders to ship</small><strong>{{ stats.to_ship }}</strong></a>
+    <div><small>Sales · 30 days</small><strong>{{ stats.revenue_30d|naira_short }}</strong></div>
+  </div>
+
+  <div class="tabs-nav mt-3">
+    <a href="?tab=all" class="{% if tab == 'all' %}is-active{% endif %}">All <span class="badge">{{ counts.all }}</span></a>
+    <a href="?tab=live" class="{% if tab == 'live' %}is-active{% endif %}">Live <span class="badge">{{ counts.live }}</span></a>
+    <a href="?tab=review" class="{% if tab == 'review' %}is-active{% endif %}">In review <span class="badge">{{ counts.review }}</span></a>
+    <a href="?tab=low" class="{% if tab == 'low' %}is-active{% endif %}">Low stock <span class="badge">{{ counts.low }}</span></a>
+    <a href="?tab=hidden" class="{% if tab == 'hidden' %}is-active{% endif %}">Hidden <span class="badge">{{ counts.hidden }}</span></a>
+  </div>
+
+  {% if products %}
+    <div class="card vendor-table">
+      {% for p in products %}
+        <div class="vt-row">
+          <img src="{{ p.thumbnail }}" alt="" referrerpolicy="no-referrer">
+          <div class="vt-name">
+            <a class="ink" href="{{ p.get_absolute_url }}">{{ p.name }}</a>
+            <div class="xs muted">{{ p.category.name }}{% if p.brand %} · {{ p.brand.name }}{% endif %}{% if p.sku %} · {{ p.sku }}{% endif %}</div>
+            <div class="vt-badges">
+              {% if p.status == 'approved' and p.is_active %}<span class="badge badge-success">Live</span>
+              {% elif p.status == 'pending' %}<span class="badge badge-warning">{% icon 'clock' 11 %} In review</span>
+              {% elif p.status == 'rejected' %}<span class="badge badge-danger" title="{{ p.moderation_note }}">Rejected</span>{% endif %}
+              {% if not p.is_active %}<span class="badge">Hidden</span>{% endif %}
+              {% if p.on_sale %}<span class="badge badge-sale">−{{ p.discount_pct }}%</span>{% endif %}
+            </div>
+            {% if p.status == 'rejected' and p.moderation_note %}<div class="xs" style="color:var(--danger)">{{ p.moderation_note }}</div>{% endif %}
+          </div>
+          <div class="vt-price"><strong>{{ p.price|naira }}</strong><small class="muted">{{ p.sold_count }} sold</small></div>
+          <form method="post" action="{% url 'cas:product_quick' p.slug %}" class="vt-stock" data-quick-stock>
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <label class="xs muted" for="stock-{{ p.pk }}">Stock</label>
+            <div class="row" style="gap:6px"><input id="stock-{{ p.pk }}" class="input input-sm {% if p.stock <= 5 %}is-low{% endif %}" type="number" name="stock" min="0" value="{{ p.stock }}" style="width:84px"><button class="btn btn-sm">Save</button></div>
+          </form>
+          <div class="vt-actions">
+            <a class="btn btn-sm" href="{% url 'cas:product_edit' p.slug %}">{% icon 'edit' 15 %} Edit</a>
+            <form method="post" action="{% url 'cas:product_quick' p.slug %}">{% csrf_token %}<input type="hidden" name="toggle_active" value="1"><input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn btn-sm btn-ghost">{% if p.is_active %}Hide{% else %}Show{% endif %}</button></form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty"><div class="empty-icon">{% icon 'box' 28 %}</div><h3>{% if tab == 'all' %}No products yet{% else %}Nothing here{% endif %}</h3><p>Add your first product: photos, price, stock and the cars it fits.</p><a class="btn btn-dark" href="{% url 'cas:product_create' %}">{% icon 'plus' 16 %} Add product</a></div>
+  {% endif %}
+</div>
+{% endblock %}

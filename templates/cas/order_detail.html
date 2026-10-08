@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Order {{ order.number }} | CarHub parts{% endblock %}
+{% block content %}
+{% include 'cas/_store_bar.html' %}
+<div class="container section" style="padding-top:28px;max-width:1040px">
+  <a class="link-arrow" href="{% url 'cas:orders' %}">{% icon 'arrow-left' 18 %} All parts orders</a>
+
+  {% if confirmed %}
+    <div class="card status-hero success-burst mt-2">
+      <div class="ok">{% icon 'check' 34 %}</div>
+      <h1 style="font-size:1.8rem">Thanks, {{ order.full_name|default:user.first_name }}! Your order is in.</h1>
+      <p class="muted mb-0">Order <strong class="ink">{{ order.number }}</strong> · {% if order.payment_method == 'pod' %}pay <strong class="ink">{{ order.total|naira }}</strong> to the courier on delivery{% elif order.payment_method == 'demo' %}demo payment, no money was taken{% else %}paid {{ order.total|naira }}{% endif %}. We've emailed your receipt to {{ order.email }}.</p>
+    </div>
+  {% else %}
+    <div class="row between row-wrap mt-2 mb-2" style="align-items:flex-end">
+      <div><h1 class="mb-0" style="font-size:clamp(1.6rem,3vw,2rem)">Order {{ order.number }}</h1><p class="muted mb-0">Placed {{ order.created_at|date:'j F Y, g:i A' }}</p></div>
+      {% include 'cas/_order_status.html' %}
+    </div>
+  {% endif %}
+
+  <div class="order-layout mt-2">
+    <div class="grid" style="gap:14px">
+      {% for item in order.items.all %}
+        <article class="card parts-item">
+          <div class="pi-head">
+            <img src="{{ item.image_url }}" alt="" referrerpolicy="no-referrer">
+            <div class="grow">
+              <strong class="ink">{{ item.name }}</strong>
+              <div class="small muted">{{ item.quantity }} × {{ item.unit_price|naira }} · sold by {{ item.vendor.profile.company_name|default:item.vendor.get_full_name }}</div>
+              {% if item.product %}<a class="link small" href="{{ item.product.get_absolute_url }}">View product</a>{% endif %}
+            </div>
+            <strong>{{ item.line_total|naira }}</strong>
+          </div>
+          <ol class="track">
+            {% for label, when, state in item.timeline %}<li class="{{ state }}"><span class="dot">{% if state == 'done' %}{% icon 'check' 12 %}{% elif state == 'cancelled' %}{% icon 'x' 12 %}{% endif %}</span><strong>{{ label }}</strong>{% if when %}<small>{{ when|date:'j M, g:i A' }}</small>{% endif %}</li>{% endfor %}
+          </ol>
+          {% if item.status == 'shipped' %}<div class="notice info small">{% icon 'truck' 16 %}<div>Shipped with <strong>{{ item.courier }}</strong>{% if item.tracking_note %}: {{ item.tracking_note }}{% endif %}</div></div>{% endif %}
+          {% if item.status == 'cancelled' %}<p class="small muted mb-0">Cancelled{% if item.cancel_reason %}: {{ item.cancel_reason }}{% endif %}.{% if order.is_paid %} Refund of {{ item.line_total|naira }} issued.{% endif %}</p>{% endif %}
+          {% if item.status == 'delivered' and item.product %}<a class="btn btn-sm" href="{{ item.product.get_absolute_url }}#reviews">{% icon 'star' 15 %} Review this item</a>{% endif %}
+          {% if item.status == 'processing' %}
+            <details class="inline-panel">
+              <summary class="link-btn muted small">Cancel this item</summary>
+              <form method="post" action="{% url 'cas:order_item_cancel' item.pk %}" class="mt-1" data-confirm="Cancel {{ item.name }}?">
+                {% csrf_token %}
+                <input class="input" name="reason" maxlength="300" placeholder="Reason (optional)">
+                <button class="btn btn-sm btn-danger mt-1">Cancel item{% if order.is_paid %} &amp; refund{% endif %}</button>
+              </form>
+            </details>
+          {% endif %}
+        </article>
+      {% endfor %}
+    </div>
+
+    <aside class="grid" style="gap:14px;align-content:start">
+      <div class="card card-pad">
+        <h3 class="pdp-h3 mt-0">{% if order.delivery_method == 'pickup' %}Pick up{% else %}Delivering to{% endif %}</h3>
+        <p class="mb-0"><strong class="ink">{{ order.full_name }}</strong><br>{{ order.phone }}<br>{% if order.address %}{{ order.address }}<br>{% endif %}{{ order.city }}, {{ order.state }}</p>
+        {% if order.delivery_notes %}<p class="small muted mb-0 mt-1">“{{ order.delivery_notes }}”</p>{% endif %}
+      </div>
+      <div class="card card-pad summary-card">
+        <h3 class="pdp-h3 mt-0">Payment</h3>
+        <dl class="sum-rows">
+          <div><dt>Subtotal</dt><dd>{{ order.subtotal|naira }}</dd></div>
+          <div><dt>Delivery</dt><dd>{% if order.delivery_fee %}{{ order.delivery_fee|naira }}{% else %}Free{% endif %}</dd></div>
+        </dl>
+        <div class="sum-total"><span>Total</span><strong>{{ order.total|naira }}</strong></div>
+        <p class="small muted mt-1 mb-0">{{ order.get_payment_method_display }}{% if order.payment_method == 'pod' %} · pay when it arrives{% elif order.paid_at %} · paid {{ order.paid_at|date:'j M Y' }}{% endif %}</p>
+      </div>
+    </aside>
+  </div>
+</div>
+{% endblock %}

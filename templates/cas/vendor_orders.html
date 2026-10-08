@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Orders to fulfil | CarHub parts{% endblock %}
+{% block content %}
+{% include 'cas/_store_bar.html' %}
+<div class="container section" style="padding-top:28px">
+  {% include 'cas/_vendor_nav.html' with vendor_section='orders' %}
+  <div class="tabs-nav mt-3">
+    <a href="?status=processing" class="{% if status == 'processing' %}is-active{% endif %}">To ship <span class="badge">{{ counts.processing|default:0 }}</span></a>
+    <a href="?status=shipped" class="{% if status == 'shipped' %}is-active{% endif %}">On the way <span class="badge">{{ counts.shipped|default:0 }}</span></a>
+    <a href="?status=delivered" class="{% if status == 'delivered' %}is-active{% endif %}">Delivered <span class="badge">{{ counts.delivered|default:0 }}</span></a>
+    <a href="?status=cancelled" class="{% if status == 'cancelled' %}is-active{% endif %}">Cancelled <span class="badge">{{ counts.cancelled|default:0 }}</span></a>
+  </div>
+
+  {% for item in items %}
+    {% with o=item.order %}
+    <article class="card fulfil-card">
+      <div class="fc-main">
+        <img src="{{ item.image_url }}" alt="" referrerpolicy="no-referrer">
+        <div class="grow">
+          <div class="row between row-wrap" style="gap:6px"><strong class="ink">{{ item.quantity }} × {{ item.name }}</strong><strong>{{ item.line_total|naira }}</strong></div>
+          <div class="small muted">Order {{ o.number }} · {{ o.created_at|ago }} · {% if o.payment_method == 'pod' %}<span class="badge badge-warning">Collect {{ o.total|naira }} on delivery</span>{% else %}Paid ({{ o.get_payment_method_display }}){% endif %}</div>
+          <dl class="fc-ship">
+            <div><dt>{% if o.delivery_method == 'pickup' %}Pick-up by{% else %}Ship to{% endif %}</dt><dd><strong>{{ o.full_name }}</strong> · <a class="link" href="tel:{{ o.phone }}">{{ o.phone }}</a><br>{% if o.address %}{{ o.address }}, {% endif %}{{ o.city }}, {{ o.state }}</dd></div>
+            {% if o.delivery_notes %}<div><dt>Note</dt><dd>“{{ o.delivery_notes }}”</dd></div>{% endif %}
+            {% if item.status == 'shipped' %}<div><dt>Courier</dt><dd>{{ item.courier }}{% if item.tracking_note %} · {{ item.tracking_note }}{% endif %} · {{ item.shipped_at|date:'j M, g:i A' }}</dd></div>{% endif %}
+            {% if item.status == 'cancelled' %}<div><dt>Cancelled</dt><dd>{{ item.cancel_reason|default:'—' }}</dd></div>{% endif %}
+          </dl>
+        </div>
+      </div>
+      {% if item.status == 'processing' %}
+        <div class="fc-actions">
+          <form method="post" action="{% url 'cas:vendor_item_action' item.pk %}" class="ship-form">
+            {% csrf_token %}<input type="hidden" name="action" value="ship"><input type="hidden" name="return_status" value="{{ status }}">
+            <select name="courier" class="input input-sm" required>
+              <option value="">Courier…</option>
+              {% for c in couriers %}<option>{{ c }}</option>{% endfor %}
+            </select>
+            <input class="input input-sm grow" name="note" maxlength="200" placeholder="Tracking number or note for the buyer">
+            <button class="btn btn-sm btn-dark">{% icon 'truck' 15 %} Mark shipped</button>
+          </form>
+          <details class="inline-panel">
+            <summary class="link-btn muted small">Can't fulfil it?</summary>
+            <form method="post" action="{% url 'cas:vendor_item_action' item.pk %}" class="row row-wrap mt-1" data-confirm="Cancel and refund this item?">
+              {% csrf_token %}<input type="hidden" name="action" value="cancel"><input type="hidden" name="return_status" value="{{ status }}">
+              <input class="input input-sm grow" name="reason" required maxlength="300" placeholder="Tell the buyer why">
+              <button class="btn btn-sm btn-danger">Cancel &amp; refund</button>
+            </form>
+          </details>
+        </div>
+      {% elif item.status == 'shipped' %}
+        <div class="fc-actions">
+          <form method="post" action="{% url 'cas:vendor_item_action' item.pk %}">{% csrf_token %}<input type="hidden" name="action" value="deliver"><input type="hidden" name="return_status" value="{{ status }}">
+            <button class="btn btn-sm btn-primary">{% icon 'check' 15 %} Mark delivered</button></form>
+        </div>
+      {% endif %}
+    </article>
+    {% endwith %}
+  {% empty %}
+    <div class="empty"><div class="empty-icon">{% icon 'truck' 28 %}</div><h3>Nothing here</h3><p>{% if status == 'processing' %}No orders waiting to ship. New orders appear here and by email.{% else %}No items in this state.{% endif %}</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

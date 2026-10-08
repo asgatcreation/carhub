@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}{% if product %}Edit {{ product.name }}{% else %}Add a product{% endif %} | CarHub parts{% endblock %}
+{% block content %}
+{% include 'cas/_store_bar.html' %}
+<div class="container section" style="padding-top:28px;max-width:960px">
+  <a class="link-arrow" href="{% url 'cas:vendor' %}">{% icon 'arrow-left' 18 %} Vendor dashboard</a>
+  <h1 class="mt-1" style="font-size:clamp(1.6rem,3vw,2.1rem)">{% if product %}Edit product{% else %}Add a product{% endif %}</h1>
+  <p class="muted">Every new or edited product is checked by our team before it goes live, usually within a day. Stock and visibility changes are instant.</p>
+  {% if product and product.status == 'rejected' %}<div class="notice danger mb-2">{% icon 'alert' 18 %}<div><strong>Not approved:</strong> {{ product.moderation_note|default:'Please review the details and resubmit.' }}</div></div>{% endif %}
+
+  <form method="post" enctype="multipart/form-data" class="card" novalidate data-busy>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="notice danger m-2">{% icon 'alert' 18 %}<div>{{ form.non_field_errors|join:' ' }}</div></div>{% endif %}
+    <div class="form-section">
+      <h3>{% icon 'box' 20 %} The product</h3>
+      <div class="form-grid">
+        <div class="span-2">{% include 'partials/field.html' with field=form.name %}</div>
+        {% include 'partials/field.html' with field=form.category %}
+        {% include 'partials/field.html' with field=form.brand_name %}
+        {% include 'partials/field.html' with field=form.part_type %}
+        {% include 'partials/field.html' with field=form.sku %}
+        <div class="span-2">{% include 'partials/field.html' with field=form.short_description %}</div>
+        <div class="span-2">{% include 'partials/field.html' with field=form.description %}</div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>{% icon 'camera' 20 %} Photos</h3>
+      {% if product %}
+        <div class="photo-manage">
+          {% for img in product.images.all %}
+            <div class="pm-item"><img src="{{ img.src }}" alt="" referrerpolicy="no-referrer">{% if forloop.first %}<span class="badge badge-dark">Cover</span>{% endif %}
+              <button class="pm-remove" type="submit" form="del-img-{{ img.pk }}" aria-label="Remove photo">{% icon 'x' 14 %}</button></div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      <label class="dropzone" data-dropzone>
+        {% icon 'upload' 28 %}
+        <strong>Drop photos here or click to upload</strong>
+        <span class="small muted">{{ form.photos.help_text }}</span>
+        {{ form.photos }}
+        <div class="preview-grid" data-previews></div>
+      </label>
+      {% for e in form.photos.errors %}<p class="error">{{ e }}</p>{% endfor %}
+    </div>
+
+    <div class="form-section">
+      <h3>{% icon 'tag' 20 %} Price &amp; stock</h3>
+      <div class="form-grid">
+        {% include 'partials/field.html' with field=form.price %}
+        {% include 'partials/field.html' with field=form.compare_at_price %}
+        {% include 'partials/field.html' with field=form.stock %}
+        {% include 'partials/field.html' with field=form.dispatch_days %}
+        {% include 'partials/field.html' with field=form.warranty_months %}
+        <div class="field"><label>&nbsp;</label>{% include 'partials/field.html' with field=form.is_active %}</div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>{% icon 'car' 20 %} Fitment</h3>
+      <p>Buyers filter by their car, so accurate fitment means more sales and fewer cancellations.</p>
+      {% include 'partials/field.html' with field=form.universal_fit %}
+      <div class="form-grid">
+        <div>{% include 'partials/field.html' with field=form.fitment_text %}</div>
+        <div>{% include 'partials/field.html' with field=form.specs_text %}</div>
+      </div>
+    </div>
+
+    <div class="form-section row between row-wrap">
+      <span class="small muted">{% if product %}Saving changes to the name, photos or description sends it for a quick re-check.{% else %}You'll be notified when it's live.{% endif %}</span>
+      <button class="btn btn-primary btn-lg">{% if product %}Save changes{% else %}Submit for review{% endif %}</button>
+    </div>
+  </form>
+  {% if product %}{% for img in product.images.all %}<form id="del-img-{{ img.pk }}" method="post" action="{% url 'cas:product_image_delete' product.slug img.pk %}" data-confirm="Remove this photo?">{% csrf_token %}</form>{% endfor %}{% endif %}
+</div>
+{% endblock %}

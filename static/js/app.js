@@ -672,6 +672,120 @@
     }, 2600);
   });
 
+  /* ---------- Parts store: "my car" picker (make → model → year) ---------- */
+  const catalogEl = $('[data-vehicle-catalog]');
+  const vehicleCatalog = catalogEl ? JSON.parse(catalogEl.textContent || '{}') : {};
+  $$('[data-garage-form]').forEach((form) => {
+    const make = $('[data-garage-make]', form);
+    const model = $('[data-garage-model]', form);
+    const year = $('[data-garage-year]', form);
+    const option = (value, label, selected) => {
+      const o = document.createElement('option');
+      o.value = value; o.textContent = label; o.selected = selected;
+      return o;
+    };
+    Object.keys(vehicleCatalog).sort().forEach((m) => make.append(option(m, m, m === make.dataset.selected)));
+    const thisYear = new Date().getFullYear() + 1;
+    for (let y = thisYear; y >= 1995; y -= 1) year.append(option(y, y, String(y) === year.dataset.selected));
+    const fillModels = () => {
+      model.replaceChildren(option('', 'Select model', false));
+      (vehicleCatalog[make.value] || []).forEach((m) => model.append(option(m, m, m === model.dataset.selected)));
+      model.disabled = !make.value;
+    };
+    make.addEventListener('change', () => { model.dataset.selected = ''; fillModels(); model.focus(); });
+    fillModels();
+  });
+
+  /* ---------- Parts store: add to cart without reloading ---------- */
+  const setPartsCount = (n) => $$('[data-parts-count]').forEach((b) => { b.textContent = n; b.hidden = !n; });
+  document.addEventListener('submit', async (e) => {
+    const form = e.target.closest('form[data-parts-add]');
+    if (!form) return;
+    e.preventDefault();
+    const btn = $('button', form);
+    try {
+      const data = await post(form.action, Object.fromEntries(new FormData(form)));
+      setPartsCount(data.parts_count);
+      if (btn) { btn.classList.add('is-added', 'pop'); setTimeout(() => btn.classList.remove('pop'), 400); }
+      toast(`${data.name} added to your cart`, { action: { label: 'View cart', href: '/accessories/cart/' } });
+    } catch (err) {
+      toast(err.message, { error: true });
+    }
+  });
+
+  /* ---------- Quantity steppers (product page + cart) ---------- */
+  const money = (v) => '₦' + Math.round(Number(v)).toLocaleString('en-NG');
+  $$('[data-qty]').forEach((wrap) => {
+    const input = $('input', wrap);
+    const clamp = (v) => Math.max(Number(input.min || 1), Math.min(Number(input.max || 10), v));
+    const change = (delta) => {
+      const next = clamp(Number(input.value || 0) + delta);
+      if (String(next) === input.value) return;
+      input.value = next;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    $('[data-qty-dec]', wrap).addEventListener('click', () => change(-1));
+    $('[data-qty-inc]', wrap).addEventListener('click', () => change(1));
+  });
+  $$('form[data-cart-qty]').forEach((form) => {
+    const input = $('input[name=quantity]', form);
+    let timer = null;
+    input.addEventListener('change', () => {
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        try {
+          const data = await post(form.action, { quantity: input.value });
+          const line = form.closest('[data-cart-line]');
+          if (!data.quantity) { line.remove(); if (!$('[data-cart-line]')) window.location.reload(); }
+          const total = line && $('[data-line-total]', line);
+          if (total) total.textContent = money(Number(total.dataset.unit) * data.quantity);
+          $$('[data-subtotal], [data-total]').forEach((el) => { el.textContent = money(data.subtotal); });
+          const gap = $('[data-free-gap]');
+          if (gap) gap.textContent = money(data.to_free_delivery);
+          setPartsCount(data.parts_count);
+        } catch (err) { toast(err.message, { error: true }); }
+      }, 350);
+    });
+  });
+
+  /* ---------- Parts checkout: live delivery fee, pickup, pay on delivery ---------- */
+  $$('form[data-parts-checkout]').forEach((form) => {
+    const fees = JSON.parse(form.dataset.fees || '{}');
+    const subtotal = Number(form.dataset.subtotal);
+    const freeFrom = Number(form.dataset.freeFrom);
+    const podStates = (form.dataset.podStates || '').split(',');
+    const podLimit = Number(form.dataset.podLimit);
+    const state = $('[name=state]', form);
+    const feeEl = $('[data-fee]', form);
+    const grandEl = $('[data-grand]', form);
+    const payLabel = $('[data-pay-label]', form);
+    const addressRow = $('[data-address-row]', form);
+    const podOption = $('[data-pay-option="pod"]', form);
+    const podNote = $('[data-pod-note]', form);
+    const update = () => {
+      const method = ($('[name=delivery_method]:checked', form) || {}).value || 'delivery';
+      const pickup = method === 'pickup';
+      if (addressRow) addressRow.hidden = pickup;
+      let fee = 0;
+      if (!pickup && state.value && subtotal < freeFrom) fee = Number(fees[state.value] || 0);
+      const total = subtotal + fee;
+      if (feeEl) feeEl.textContent = pickup ? 'Free (pick up)' : !state.value ? 'Select a state' : fee ? money(fee) : 'Free';
+      if (grandEl) grandEl.textContent = money(total);
+      const podOk = !pickup && podStates.includes(state.value) && total <= podLimit;
+      if (podOption) {
+        podOption.classList.toggle('is-disabled', !podOk);
+        const radio = $('input', podOption);
+        radio.disabled = !podOk;
+        if (!podOk && radio.checked) { radio.checked = false; const first = $('[name=payment_method]:not(:disabled)', form); if (first) first.checked = true; }
+      }
+      if (podNote) podNote.hidden = podOk || !state.value;
+      const pay = ($('[name=payment_method]:checked', form) || {}).value;
+      if (payLabel) payLabel.textContent = pay === 'paystack' ? `Pay ${money(total)}` : pay === 'pod' ? 'Place order · pay on delivery' : 'Place order';
+    };
+    form.addEventListener('change', update);
+    update();
+  });
+
   /* ---------- Confirm dangerous actions ---------- */
   document.addEventListener('submit', (e) => {
     const msg = e.target.dataset.confirm;

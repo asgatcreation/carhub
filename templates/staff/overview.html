@@ -11,6 +11,11 @@
     <strong>{{ counts.listings }}</strong><span>Listings to approve</span>
     <em>From new sellers, hidden until approved {% icon 'arrow-right' 14 %}</em>
   </a>
+  <a class="queue-card q-teal" href="{% url 'staff:products' %}">
+    <span class="q-icon">{% icon 'box' 22 %}</span>
+    <strong>{{ counts.products }}</strong><span>Parts to approve</span>
+    <em>Vendor products, hidden until approved {% icon 'arrow-right' 14 %}</em>
+  </a>
   <a class="queue-card q-blue" href="{% url 'staff:reviews' %}">
     <span class="q-icon">{% icon 'star' 22 %}</span>
     <strong>{{ counts.reviews }}</strong><span>Reviews to moderate</span>

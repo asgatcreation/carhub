@@ -33,7 +33,8 @@ def demo_logins(request):
         'accounts': [
             ('Buyer', f'buyer@{DEMO_DOMAIN}', 'Orders, saved cars & messages'),
             ('Dealer', f'harborpoint@{DEMO_DOMAIN}', 'Verified dealer with listings'),
-            ('Moderator', f'moderator@{DEMO_DOMAIN}', 'Review the listing queue'),
+            ('Parts vendor', f'ladipoparts@{DEMO_DOMAIN}', 'Products, stock and orders to ship'),
+            ('Moderator', f'moderator@{DEMO_DOMAIN}', 'Admin console and review queues'),
         ],
     }}
 

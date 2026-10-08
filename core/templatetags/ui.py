@@ -95,3 +95,28 @@ def absval(value):
 @register.filter
 def split(value, sep=','):
     return [part.strip() for part in str(value).split(sep) if part.strip()]
+
+
+@register.filter
+def sub(value, arg):
+    try:
+        return value - arg
+    except TypeError:
+        return value
+
+
+@register.filter
+def fits_vehicle(fitment, vehicle):
+    """True when a cas Fitment matches the garage vehicle dict."""
+    return bool(vehicle) and fitment.matches(vehicle.get('make'), vehicle.get('model'), vehicle.get('year'))
+
+
+@register.filter
+def fits_garage(product, vehicle):
+    """True / False / None: does a cas Product fit the garage vehicle?"""
+    return product.fits(vehicle)
+
+
+@register.filter
+def map_attr(items, attr):
+    return [getattr(i, attr) for i in items]
