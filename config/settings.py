@@ -361,5 +361,6 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = int(os.environ.get('DJANGO_HSTS_SECONDS', '3600'))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = False
 
-# Serve the PWA manifest with its registered type (WhiteNoise uses mimetypes).
+# Serve the PWA manifest with its registered type (runserver uses mimetypes, WhiteNoise its own map).
 mimetypes.add_type('application/manifest+json', '.webmanifest')
+WHITENOISE_MIMETYPES = {'.webmanifest': 'application/manifest+json'}
