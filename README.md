@@ -8,6 +8,7 @@
 ![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.13-3776AB?logo=python&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-5.2-0C4B33?logo=django&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-146%20passing-11845b)
+![License](https://img.shields.io/badge/license-all%20rights%20reserved-lightgrey)
 
 **[Live demo →](https://carhub-es73.onrender.com/)** &nbsp;·&nbsp; [Buyer journey](#the-buyer-journey) &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Run it locally](#run-it-locally) &nbsp;·&nbsp; [Architecture](#architecture)
 
@@ -268,3 +269,7 @@ python manage.py test
 Designed and built by **Akanji Oluwaseun Gabriel** ([@asgatcreation](https://github.com/asgatcreation)).
 Maps &copy; [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors; search by [Photon](https://photon.komoot.io) (Komoot); routing by [OSRM](https://project-osrm.org).
 Vehicle and product photos: [Wikimedia Commons](https://commons.wikimedia.org/) contributors under Creative Commons or public-domain licences, credited on each listing and product.
+
+## License
+
+Copyright &copy; 2026 Akanji Oluwaseun Gabriel. **All rights reserved.** The source is public so you can review my work; it is not licensed for reuse. You may not copy, modify, redistribute or use this code, in whole or in part, without written permission. See [LICENSE](LICENSE).

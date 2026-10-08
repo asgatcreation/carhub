@@ -1,0 +1,30 @@
+Copyright (c) 2026 Akanji Oluwaseun Gabriel (@asgatcreation). All rights reserved.
+
+This repository is published publicly as a portfolio of the author's work so that
+clients, employers and reviewers can read the source code and see the live demo.
+
+Publishing it does NOT grant any licence to use it. Without prior written
+permission from the copyright holder, you may not:
+
+  - copy, reproduce or redistribute this software or any substantial part of it;
+  - modify it or create derivative works based on it;
+  - use it, in whole or in part, in any commercial or non-commercial product,
+    service or website;
+  - sublicense, sell, rent or otherwise make it available to others;
+  - remove or alter this notice or any author attribution.
+
+You may view the code on GitHub and fork it on GitHub solely as permitted by
+GitHub's Terms of Service, for the purpose of viewing it.
+
+Third-party components keep their own licences: open-source libraries listed in
+requirements.txt and loaded in the browser (Django, Leaflet and others), map data
+from OpenStreetMap contributors (ODbL), and vehicle and product photos from
+Wikimedia Commons contributors, credited on each page under their stated
+Creative Commons or public-domain licences.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.
+
+For permission or collaboration enquiries, contact the author through
+https://github.com/asgatcreation.
