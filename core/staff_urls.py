@@ -16,5 +16,7 @@ urlpatterns = [
     path('photos/approve-all/', staff.photos_approve_all, name='photos_approve_all'),
     path('photos/<int:image_id>/', staff.photo_decide, name='photo_decide'),
     path('verifications/', staff.verifications, name='verifications'),
+    path('live/', staff.live_map, name='live'),
+    path('live/data/', staff.live_data, name='live_data'),
     path('verifications/<int:app_id>/', staff.verification_decide, name='verification_decide'),
 ]

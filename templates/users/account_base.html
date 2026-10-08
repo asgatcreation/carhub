@@ -7,6 +7,7 @@
     <a href="{% url 'users:dashboard' %}" class="{% if path == '/account/' %}is-active{% endif %}">{% icon 'dashboard' 18 %} Overview</a>
     <a href="{% url 'cars:orders' %}" class="{% if '/cars/orders' in path %}is-active{% endif %}">{% icon 'receipt' 18 %} Car reservations</a>
     <a href="{% url 'cas:orders' %}">{% icon 'box' 18 %} Parts orders</a>
+    <a href="{% url 'driverzone:trips' %}">{% icon 'steering' 18 %} My trips</a>
     <a href="{% url 'cars:saved' %}">{% icon 'heart' 18 %} Saved cars{% if saved_count %}<span class="pill badge">{{ saved_count }}</span>{% endif %}</a>
     <a href="{% url 'users:inbox' %}" class="{% if '/account/inbox' in path or '/account/conversation' in path %}is-active{% endif %}">{% icon 'message' 18 %} Messages{% if messages_unread_count %}<span class="pill badge badge-brand">{{ messages_unread_count }}</span>{% endif %}</a>
     <a href="{% url 'users:notifications' %}" class="{% if '/account/notifications' in path %}is-active{% endif %}">{% icon 'bell' 18 %} Notifications{% if notifications_unread_count %}<span class="pill badge badge-brand">{{ notifications_unread_count }}</span>{% endif %}</a>
@@ -16,6 +17,7 @@
     <a href="{% url 'cars:listing_create' %}" class="{% if path == '/cars/sell/new/' %}is-active{% endif %}">{% icon 'plus' 18 %} New listing</a>
     {% if not user.profile.is_car_seller_approved %}<a href="{% url 'users:apply_seller' %}" class="{% if '/account/verify' in path %}is-active{% endif %}">{% icon 'verified' 18 %} Get verified</a>{% endif %}
     {% if user.profile.is_cas_seller_approved %}<a href="{% url 'cas:vendor' %}">{% icon 'wrench' 18 %} Parts vendor</a>{% endif %}
+    {% if user.driver_profile.license_verified %}<a href="{% url 'driverzone:dashboard' %}">{% icon 'pin' 18 %} Driver app</a>{% endif %}
     {% if user.is_staff %}
       <div class="nav-label">Staff</div>
       <a href="{% url 'staff:overview' %}">{% icon 'moderation' 18 %} Admin console</a>

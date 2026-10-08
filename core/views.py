@@ -77,17 +77,6 @@ def contact(request):
     return render(request, 'core/contact.html', {'form': form})
 
 
-def coming_soon(request, section):
-    pages = {
-        'drivers': {
-            'title': 'Hire a driver', 'icon': 'steering',
-            'lead': 'Book vetted, licensed drivers by the hour, day or for interstate trips.',
-            'points': ['Licence and background checks', 'Transparent daily rates', 'Rate every trip'],
-        },
-    }
-    return render(request, 'core/coming_soon.html', {'page': pages[section], 'section': section})
-
-
 def page_not_found(request, exception):
     return render(request, '404.html', status=404)
 

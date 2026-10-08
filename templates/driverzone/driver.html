@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}{{ d.user.first_name }}, CarHub chauffeur{% endblock %}
+{% block content %}
+<div class="container section" style="padding-top:28px;max-width:1040px">
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="{% url 'driverzone:home' %}">Rides &amp; drivers</a>{% icon 'chevron-right' 14 %}<a href="{% url 'driverzone:drivers' %}">Chauffeurs</a>{% icon 'chevron-right' 14 %}<span>{{ d.user.first_name }}</span></nav>
+  <div class="dz-profile mt-2">
+    <div class="card card-pad dz-profile-main">
+      <div class="row" style="gap:18px;align-items:center">
+        <span class="dz-avatar xl {% if d.vehicle_class == 'comfort' %}comfort{% endif %}">{{ d.user|initials }}{% if d.is_online %}<i class="dz-online"></i>{% endif %}</span>
+        <div>
+          <h1 class="mb-0" style="font-size:1.9rem">{{ d.user.first_name }} {{ d.user.last_name|slice:':1' }}.</h1>
+          <div class="row row-wrap mt-1" style="gap:6px">
+            <span class="badge badge-info">{% icon 'verified' 12 %} Licence verified</span>
+            {% if d.is_online %}<span class="badge badge-success">Online now</span>{% endif %}
+            <span class="badge">{% icon 'pin' 12 %} {{ d.city }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="seller-kpis mt-3">
+        <div><strong>{% if d.rating_avg %}{{ d.rating_avg|floatformat:2 }}{% else %}New{% endif %}</strong><span>Rating ({{ d.rating_count }})</span></div>
+        <div><strong>{{ d.trips_count }}</strong><span>Trips</span></div>
+        <div><strong>{{ d.years_experience }}</strong><span>Years driving</span></div>
+        <div><strong>{{ d.languages|truncatechars:22 }}</strong><span>Languages</span></div>
+      </div>
+      {% if d.bio %}<p class="mt-3 mb-0">{{ d.bio }}</p>{% endif %}
+      {% if compliments %}<h3 class="pdp-h3">Riders say</h3><div class="row row-wrap" style="gap:6px">{% for c, n in compliments %}<span class="chip">{{ c }} <small class="subtle">×{{ n }}</small></span>{% endfor %}</div>{% endif %}
+      {% if ratings %}
+        <h3 class="pdp-h3">Recent comments</h3>
+        {% for r in ratings %}<div class="review"><div class="row between"><strong class="ink small">{{ r.trip.rider.first_name|default:'Rider' }}</strong><span class="stars">{% for i in '12345' %}<svg class="icon {% if forloop.counter > r.stars %}off{% endif %}" width="13" height="13"><use href="#i-star"></use></svg>{% endfor %}</span></div><p class="mb-0 mt-1 small">“{{ r.comment }}”</p></div>{% endfor %}
+      {% endif %}
+    </div>
+    <aside class="grid" style="gap:14px;align-content:start">
+      <div class="card card-pad">
+        <h3 class="mt-0">Chauffeur rates</h3>
+        <dl class="sum-rows">
+          <div><dt>Per hour</dt><dd>{{ d.hourly_rate|naira }}</dd></div>
+          <div><dt>Minimum</dt><dd>3 hours</dd></div>
+          <div><dt>Full day (10 h)</dt><dd>{{ chauffeur_day|naira }}</dd></div>
+        </dl>
+        <p class="xs muted mt-1">Drives your car. Fuel and tolls are paid by you.</p>
+        <a class="btn btn-primary btn-block" href="{% url 'driverzone:home' %}?mode=chauffeur">{% icon 'steering' 16 %} Book a chauffeur</a>
+      </div>
+      {% if d.vehicle_make %}
+      <div class="card card-pad">
+        <h3 class="mt-0">Also offers rides</h3>
+        <p class="mb-0"><strong class="ink">{{ d.vehicle_year }} {{ d.vehicle }}</strong><br><span class="muted small">{{ d.get_vehicle_class_display }} class · {{ d.plate_number }}</span></p>
+      </div>
+      {% endif %}
+    </aside>
+  </div>
+</div>
+{% endblock %}

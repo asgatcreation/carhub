@@ -1,0 +1,31 @@
+{% extends 'staff/base.html' %}
+{% block head %}{% include 'driverzone/_maps_head.html' %}{% endblock %}
+{% block console_title %}Live rides map{% endblock %}
+{% block crumb %} / Workspace{% endblock %}
+{% block heading %}Live rides map{% endblock %}
+{% block actions %}
+  <div class="dz-city" role="group" aria-label="City">
+    <button type="button" class="is-active" data-ops-city="Lagos">Lagos</button>
+    <button type="button" data-ops-city="Abuja">Abuja</button>
+  </div>
+{% endblock %}
+{% block account_content %}
+<div class="dz-ops" data-dz-ops data-url="{% url 'staff:live_data' %}">
+  <div class="dz-ops-stats">
+    <div><small>Drivers online</small><strong data-ops-drivers>–</strong></div>
+    <div><small>On a trip</small><strong data-ops-busy>–</strong></div>
+    <div><small>Active trips</small><strong data-ops-trips>–</strong></div>
+    <div><small>Trips today</small><strong>{{ today_trips }}</strong></div>
+    <div><small>Verified drivers</small><strong>{{ drivers_total }}</strong></div>
+  </div>
+  <div class="dz-ops-body">
+    <div class="dz-ops-map card"><div class="dz-map" id="dz-map"></div></div>
+    <aside class="card card-pad dz-ops-side">
+      <h3 class="console-h2">Active trips</h3>
+      <div data-ops-list><p class="muted small">Loading…</p></div>
+      <p class="xs subtle mt-2 mb-0">Updates every few seconds. Yellow cars are on a trip; dark cars are available.</p>
+    </aside>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}{% include 'driverzone/_maps_scripts.html' %}{% endblock %}

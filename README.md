@@ -7,7 +7,7 @@
 [![CI](https://github.com/asgatcreation/carhub/actions/workflows/ci.yml/badge.svg)](https://github.com/asgatcreation/carhub/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.13-3776AB?logo=python&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-5.2-0C4B33?logo=django&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-113%20passing-11845b)
+![Tests](https://img.shields.io/badge/tests-132%20passing-11845b)
 
 **[Live demo →](https://carhub-es73.onrender.com/)** &nbsp;·&nbsp; [Buyer journey](#the-buyer-journey) &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Run it locally](#run-it-locally) &nbsp;·&nbsp; [Architecture](#architecture)
 
@@ -62,6 +62,23 @@ Each step has a real status, notification and email behind it, from the deposit 
 
 Checkout is paid in full by Paystack, the demo payment, or **pay on delivery** in Lagos and Abuja. Delivery is priced by state and free over ₦100,000, or buyers can collect from the vendor. Stock rows are locked when an order is placed, so items can't be oversold. Every new or edited product is checked in the admin console before it goes live.
 
+### Rides & drivers (DriverZone)
+
+| | |
+| :-- | :-- |
+| <img src="docs/screenshots/21-rides-booking.jpg" alt="Booking a ride on the map"> | <img src="docs/screenshots/22-live-trip.jpg" alt="Live trip tracking"> |
+| **Book on a real map.** Search any address or landmark (Photon geocoding, biased to Nigeria), use your GPS, or drop and drag pins. The route is planned on real roads (OSRM), and each option shows a fare and how many minutes away the nearest driver is. | **Track it live.** The driver's car moves on the map along the road, with a pickup countdown, the driver's name, rating, car and plate, and a call button. Trips go from finding a driver to on the way, arrived, on trip and completed, then you rate the driver and can tip. |
+
+<img src="docs/screenshots/23-rides-mobile.jpg" alt="Booking, live trip and driver app on mobile" width="100%">
+
+- **Two services:** *Ride* (Economy or Comfort, the driver's car, priced from distance and time with busy-hour pricing) and *Chauffeur*: a vetted driver drives **your** car by the hour or the day, now or scheduled up to 30 days ahead.
+- **Driver app:** drivers go online and share live GPS from their phone's browser, then accept or decline requests (declined trips go to the next nearest driver). Pickup, start and complete are one tap each, with navigation links and today's and the week's earnings.
+- **Dispatch:** the nearest idle, verified driver of the right class gets the trip. Prices are always recomputed on the server from the route, never trusted from the browser.
+- **Demo drivers:** the 16 seeded drivers aren't really driving, so their trips are simulated along the actual road route on a faster clock. The same live map then works end to end; real drivers sharing GPS are tracked for real.
+- **Operations:** a live map in the admin console shows every online driver and active trip. Driver applications are approved in Verifications, which creates the driver's profile with their licence and car.
+
+<img src="docs/screenshots/24-live-ops.jpg" alt="Live rides map in the admin console" width="100%">
+
 ### Admin console: everything public is checked first
 
 | | |
@@ -104,6 +121,12 @@ Every screen is designed for a 390px-wide phone first. Car sections become swipe
 - Per-item order tracking (preparing → shipped → delivered), cancellation with restock and refund, and moderated, rated reviews.
 - Vendor onboarding through verification, a vendor dashboard and a fulfilment queue.
 
+**Rides & drivers**
+- Leaflet map with OpenStreetMap tiles (dark-mode aware), Photon address search with keyboard support, "use my location", and draggable pins with reverse geocoding.
+- Server-side routing and pricing (OSRM, with a straight-line fallback if it's unreachable), busy-hour pricing, a minimum fare, and chauffeur hourly or day rates.
+- Live trip page polling a tracking API: the car glides along the route, with an ETA ring and a status tracker; free cancellation until the driver arrives; ratings with compliments and tips.
+- Driver app with an online toggle, browser GPS sharing, accept/decline/arrive/start/complete, and earnings.
+
 **Staff**
 - A front-end admin console (`/staff/`) with its own branded sign-in, dark sidebar and live queue counts.
 - Pre-publication moderation of listings from new sellers and of every buyer review; spot checks of new photos; verification of dealers, drivers and accessory vendors (approve, reject or request changes).
@@ -125,7 +148,7 @@ Every screen is designed for a 390px-wide phone first. Car sections become swipe
 | Frontend | Server-rendered templates, a hand-written CSS design system (tokens, dark theme), vanilla JS with progressive enhancement |
 | Data | SQLite locally, Postgres via `DATABASE_URL` |
 | Hosting | Render (daphne ASGI), WhiteNoise static files |
-| Quality | 113 automated tests, GitHub Actions CI on Python 3.12 and 3.13 |
+| Quality | 132 automated tests, GitHub Actions CI on Python 3.12 and 3.13 |
 
 ## Architecture
 
@@ -142,7 +165,9 @@ templates/emails/  responsive HTML email layout used by every email
 cas/               parts & accessories store: catalogue, fitment, cart, checkout, orders, vendors, reviews
   services.py      cart, garage, delivery pricing, order creation with stock locking, fulfilment
   seed/            demo catalogue + curated product-photo credits (part_photos.json)
-driverzone/        scaffolding for the upcoming Hire-a-driver section
+driverzone/        rides & chauffeur hire: booking, dispatch, live tracking, driver app, ratings
+  services.py      OSRM routing + cache, pricing, nearest-driver dispatch, trip state machine, demo simulation
+static/js/driverzone.js   Leaflet maps, Photon search, booking panel, live tracking, driver app
 ```
 
 Decisions worth calling out:
@@ -176,6 +201,7 @@ All demo accounts use the password `CarHubDemo!2026`, and the sign-in page offer
 | Buyer | `buyer@carhub.demo` | Orders at every stage, saved cars, checkout, messages |
 | Verified dealer | `harborpoint@carhub.demo` | Reservations to confirm, a scheduled inspection, completed and cancelled sales |
 | Parts vendor | `ladipoparts@carhub.demo` | Vendor dashboard, stock, orders to ship |
+| Driver | `driver@carhub.demo` | Driver app: go online, share GPS, accept trips, earnings |
 | Moderator (staff) | `moderator@carhub.demo` | Admin console at `/staff/`: listings, reviews, photos, verifications |
 
 The moderator is deliberately **not** a superuser. To restore fresh demo data, run `python manage.py seed_demo --reset`.
@@ -200,7 +226,7 @@ The moderator is deliberately **not** a superuser. To restore fresh demo data, r
 python manage.py test
 ```
 
-113 tests cover:
+132 tests cover:
 - Search and filters, moderation visibility and price insight.
 - The guest → sign-in → checkout hand-off and the cart merge.
 - Each checkout step: date validation, the locked email, exact totals, demo and mocked Paystack payments, and a car reserved by someone else mid-checkout.
@@ -209,11 +235,12 @@ python manage.py test
 
 ## Roadmap
 
-- Hire-a-driver (DriverZone)
+- Real-time push over WebSockets for trip updates (the live map currently polls every few seconds)
 - Persistent Postgres + Cloudinary uploads for the hosted demo
 - Saved searches with email alerts, and side-by-side comparison
 
 ## Credits
 
 Designed and built by **Akanji Oluwaseun Gabriel** ([@asgatcreation](https://github.com/asgatcreation)).
+Maps &copy; [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors; search by [Photon](https://photon.komoot.io) (Komoot); routing by [OSRM](https://project-osrm.org).
 Vehicle and product photos: [Wikimedia Commons](https://commons.wikimedia.org/) contributors under Creative Commons or public-domain licences, credited on each listing and product.

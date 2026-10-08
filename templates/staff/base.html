@@ -13,6 +13,7 @@
     <nav class="console-nav">
       <div class="console-label">Workspace</div>
       <a href="{% url 'staff:overview' %}" class="{% if section == 'overview' %}is-active{% endif %}">{% icon 'dashboard' 18 %}<span>Overview</span></a>
+      <a href="{% url 'staff:live' %}" class="{% if section == 'live' %}is-active{% endif %}">{% icon 'pin' 18 %}<span>Live rides map</span></a>
       <div class="console-label">Review queues</div>
       <a href="{% url 'cars:moderation' %}" class="{% if section == 'listings' %}is-active{% endif %}">{% icon 'car' 18 %}<span>Listings</span>{% if queue.listings %}<b>{{ queue.listings }}</b>{% endif %}</a>
       <a href="{% url 'staff:products' %}" class="{% if section == 'products' %}is-active{% endif %}">{% icon 'box' 18 %}<span>Products</span>{% if queue.products %}<b>{{ queue.products }}</b>{% endif %}</a>

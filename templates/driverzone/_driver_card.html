@@ -1,0 +1,9 @@
+<a class="dz-driver-card card" href="{{ d.get_absolute_url }}">
+  <span class="dz-avatar {% if d.vehicle_class == 'comfort' %}comfort{% endif %}">{{ d.user|initials }}{% if d.is_online %}<i class="dz-online" title="Online now"></i>{% endif %}</span>
+  <div class="grow">
+    <strong>{{ d.user.first_name }} {{ d.user.last_name|slice:':1' }}.</strong>
+    <div class="xs muted">{% if d.rating_avg %}<span class="stars">{% icon 'star' 12 %}</span> {{ d.rating_avg|floatformat:2 }} · {% endif %}{{ d.trips_count }} trips · {{ d.years_experience }} yrs</div>
+    <div class="xs muted">{{ d.city }} · {{ d.languages }}</div>
+  </div>
+  <div class="text-right"><strong class="ink">{{ d.hourly_rate|naira }}</strong><div class="xs muted">per hour</div></div>
+</a>

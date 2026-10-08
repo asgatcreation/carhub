@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Hire a chauffeur | CarHub{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="container">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="{% url 'driverzone:home' %}">Rides &amp; drivers</a>{% icon 'chevron-right' 14 %}<span>Chauffeurs</span></nav>
+    <h1>Hire a chauffeur</h1>
+    <p class="muted mb-0">Licence-verified drivers who'll drive your car: errands, events, airport runs or the whole day.</p>
+  </div>
+</div>
+<div class="container section" style="padding-top:24px">
+  <div class="row between row-wrap mb-2">
+    <div class="chip-row">
+      <a class="chip {% if not city %}is-active{% endif %}" href="?">All cities</a>
+      {% for c in cities %}<a class="chip {% if city == c %}is-active{% endif %}" href="?city={{ c }}">{{ c }}</a>{% endfor %}
+    </div>
+    <a class="btn btn-primary" href="{% url 'driverzone:home' %}?mode=chauffeur">{% icon 'steering' 16 %} Book a chauffeur</a>
+  </div>
+  <div class="dz-chauffeurs wide">{% for d in drivers %}{% include 'driverzone/_driver_card.html' %}{% empty %}<p class="muted">No chauffeurs here yet.</p>{% endfor %}</div>
+</div>
+{% endblock %}

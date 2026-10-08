@@ -109,6 +109,8 @@ class Command(BaseCommand):
             self._photo_queue(cars)
             from cas.seed.build import build as build_parts_store
             build_parts_store(self.rng, DEMO_PASSWORD, DEMO_DOMAIN, self.buyers)
+            from driverzone.seed import build as build_driverzone
+            build_driverzone(self.rng, DEMO_PASSWORD, DEMO_DOMAIN, self.buyers)
 
         call_command('ensure_admin')  # the site owner's login survives demo resets
         self.stdout.write(self.style.SUCCESS(

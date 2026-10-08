@@ -322,6 +322,24 @@ def photos_approve_all(request):
 
 # ---------------------------------------------------------------- verifications
 
+def _parse_vehicle(text):
+    """'2019 Toyota Corolla, grey, LND-482-KJ' -> vehicle fields for a DriverProfile."""
+    parts = [p.strip() for p in (text or '').split(',')]
+    out = {}
+    if parts and parts[0]:
+        words = parts[0].split()
+        if words and words[0].isdigit():
+            out['vehicle_year'] = int(words.pop(0))
+        if words:
+            out['vehicle_make'] = words[0]
+            out['vehicle_model'] = ' '.join(words[1:])
+    if len(parts) > 1:
+        out['vehicle_color'] = parts[1].title()[:30]
+    if len(parts) > 2:
+        out['plate_number'] = parts[2].upper()[:20]
+    return out
+
+
 ROLES = [('car_seller', 'Car dealers', 'verified'), ('pilot', 'Drivers', 'steering'), ('cas_seller', 'Accessory vendors', 'wrench')]
 
 
@@ -362,10 +380,12 @@ def verification_decide(request, app_id):
                 profile.company_name = app.company_name
         elif app.role == 'pilot':
             profile.is_pilot_approved = True
-            driver = getattr(app.user, 'driver_profile', None)
-            if driver:
-                driver.license_verified = True
-                driver.save(update_fields=['license_verified'])
+            from driverzone.models import DriverProfile
+            vehicle = _parse_vehicle(app.vehicle_details)
+            DriverProfile.objects.update_or_create(user=app.user, defaults={
+                'license_number': app.id_number, 'license_verified': True, 'is_active': True,
+                'years_experience': app.experience_years, 'city': profile.city or 'Lagos',
+                'bio': app.additional_info[:500], **vehicle})
         else:
             profile.is_cas_seller_approved = True
         profile.save()
@@ -380,3 +400,37 @@ def verification_decide(request, app_id):
         return JsonResponse({'ok': True})
     messages.success(request, f'Application {app.get_status_display().lower()}.')
     return redirect(f"{reverse('staff:verifications')}?role={app.role}")
+
+
+# ---------------------------------------------------------------- DriverZone live operations
+
+@staff_member_required
+def live_map(request):
+    from driverzone.models import DriverProfile, Trip
+    return render(request, 'staff/live.html', {
+        'section': 'live',
+        'today_trips': Trip.objects.filter(created_at__date=timezone.localdate()).count(),
+        'drivers_total': DriverProfile.objects.filter(license_verified=True, is_active=True).count(),
+    })
+
+
+@staff_member_required
+def live_data(request):
+    from driverzone import services as dz
+    from driverzone.models import DriverProfile, Trip
+    busy = dz.busy_driver_ids()
+    drivers = DriverProfile.objects.filter(is_online=True, lat__isnull=False).select_related('user')
+    trips = Trip.objects.filter(status__in=Trip.ACTIVE, scheduled_for__isnull=True).select_related('driver__user')
+    payload_trips = []
+    for t in trips:
+        dz.advance_simulation(t)
+        if t.is_active:
+            payload_trips.append({'number': t.number, 'status': t.status, 'url': t.get_absolute_url(),
+                                  'pickup': [t.pickup_lat, t.pickup_lng], 'pickup_address': t.pickup_address,
+                                  'dropoff': [t.dropoff_lat, t.dropoff_lng] if t.dropoff_lat is not None else None,
+                                  'route': t.route[::3], 'driver': t.driver.name if t.driver else ''})
+    return JsonResponse({
+        'drivers': [{'lat': d.lat, 'lng': d.lng, 'heading': d.heading, 'cls': d.vehicle_class, 'busy': d.pk in busy,
+                     'name': d.name, 'vehicle': d.vehicle} for d in drivers],
+        'trips': payload_trips,
+    })

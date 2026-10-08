@@ -1682,3 +1682,9 @@ form.inline { display: inline; margin: 0; }
 .pp-grid .part-sub, .pp-grid .part-rating { display: none; }
 @media (max-width: 1100px) { .parts-promo { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 760px) { .parts-promo { padding: 20px; } .pp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* The hidden attribute always wins over component display rules. */
+[hidden] { display: none !important; }
+.rides-band { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; padding: 24px 28px; border-radius: var(--radius-xl); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.rides-band h2 { margin: 4px 0 6px; font-size: clamp(1.3rem, 2.4vw, 1.7rem); }
+.rb-icon { width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center; background: var(--night); color: var(--brand); flex: none; }

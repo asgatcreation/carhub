@@ -11,7 +11,7 @@
       <a href="{% url 'cars:browse' %}" class="{% if path == '/cars/' or '/cars/car/' in path %}is-active{% endif %}">Buy a car</a>
       <a href="{% url 'cars:sell' %}" class="{% if '/cars/sell' in path %}is-active{% endif %}">Sell your car</a>
       <a href="{% url 'cas:home' %}" class="{% if '/accessories/' in path %}is-active{% endif %}">Parts &amp; accessories</a>
-      <a href="{% url 'drivers' %}" class="{% if path == '/drivers/' %}is-active{% endif %}">Hire a driver<span class="soon">Soon</span></a>
+      <a href="{% url 'driverzone:home' %}" class="{% if '/drivers/' in path %}is-active{% endif %}">Rides &amp; drivers</a>
     </nav>
 
     <form class="header-search" action="{% url 'cars:browse' %}" method="get" role="search" data-suggest>
@@ -53,6 +53,8 @@
             <a href="{% url 'users:dashboard' %}">{% icon 'dashboard' 18 %} Dashboard</a>
             <a href="{% url 'cars:orders' %}">{% icon 'receipt' 18 %} Car reservations</a>
             <a href="{% url 'cas:orders' %}">{% icon 'box' 18 %} Parts orders</a>
+            <a href="{% url 'driverzone:trips' %}">{% icon 'steering' 18 %} My trips</a>
+            {% if user.driver_profile.license_verified %}<a href="{% url 'driverzone:dashboard' %}">{% icon 'pin' 18 %} Driver app</a>{% endif %}
             {% if user.profile.is_cas_seller_approved %}<a href="{% url 'cas:vendor' %}">{% icon 'wrench' 18 %} Vendor dashboard</a>{% endif %}
             <a href="{% url 'cars:my_listings' %}">{% icon 'car' 18 %} My listings</a>
             <a href="{% url 'cars:sales' %}">{% icon 'calendar' 18 %} Reservations</a>
@@ -92,13 +94,14 @@
       <a href="{% url 'cars:browse' %}">{% icon 'car' 20 %} Buy a car</a>
       <a href="{% url 'cars:sell' %}">{% icon 'tag' 20 %} Sell your car</a>
       <a href="{% url 'cas:home' %}">{% icon 'wrench' 20 %} Parts &amp; accessories</a>
-      <a href="{% url 'drivers' %}">{% icon 'steering' 20 %} Hire a driver <span class="badge">Soon</span></a>
+      <a href="{% url 'driverzone:home' %}">{% icon 'steering' 20 %} Rides &amp; drivers</a>
       {% if user.is_authenticated %}
         <a href="{% url 'users:dashboard' %}">{% icon 'dashboard' 20 %} Dashboard</a>
         <a href="{% url 'users:inbox' %}">{% icon 'message' 20 %} Messages {% if messages_unread_count %}<span class="badge badge-brand">{{ messages_unread_count }}</span>{% endif %}</a>
         <a href="{% url 'users:notifications' %}">{% icon 'bell' 20 %} Notifications</a>
         <a href="{% url 'cars:orders' %}">{% icon 'receipt' 20 %} Car reservations</a>
         <a href="{% url 'cas:orders' %}">{% icon 'box' 20 %} Parts orders</a>
+        <a href="{% url 'driverzone:trips' %}">{% icon 'steering' 20 %} My trips</a>
         <a href="{% url 'cars:my_listings' %}">{% icon 'list' 20 %} My listings</a>
         <a href="{% url 'cars:sales' %}">{% icon 'calendar' 20 %} Reservations</a>
         <a href="{% url 'users:settings' %}">{% icon 'settings' 20 %} Settings</a>

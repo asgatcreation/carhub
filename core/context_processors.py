@@ -34,6 +34,7 @@ def demo_logins(request):
             ('Buyer', f'buyer@{DEMO_DOMAIN}', 'Orders, saved cars & messages'),
             ('Dealer', f'harborpoint@{DEMO_DOMAIN}', 'Verified dealer with listings'),
             ('Parts vendor', f'ladipoparts@{DEMO_DOMAIN}', 'Products, stock and orders to ship'),
+            ('Driver', f'driver@{DEMO_DOMAIN}', 'Driver app: go online, accept trips, earnings'),
             ('Moderator', f'moderator@{DEMO_DOMAIN}', 'Admin console and review queues'),
         ],
     }}

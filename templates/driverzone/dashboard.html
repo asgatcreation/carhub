@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}Driver app | CarHub{% endblock %}
+{% block head %}{% include 'driverzone/_maps_head.html' %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div class="dz-shell" data-dz-driver data-state-url="{{ state_url }}" data-location-url="{% url 'driverzone:api_driver_location' %}"
+     data-online-url="{% url 'driverzone:api_driver_online' %}" data-me='{"lat": {{ d.lat|default_if_none:"null" }}, "lng": {{ d.lng|default_if_none:"null" }}, "city": "{{ d.city }}"}'>
+  <div class="dz-map" id="dz-map" aria-label="Map"></div>
+  <aside class="dz-panel dz-driver-panel">
+    <div class="dz-panel-head">
+      <div><span class="eyebrow">{% icon 'steering' 14 %} Driver app</span><h1>Hi, {{ d.user.first_name }}</h1></div>
+      <label class="dz-online-toggle {% if d.is_online %}is-on{% endif %}" data-online-toggle>
+        <input type="checkbox" {% if d.is_online %}checked{% endif %}><span class="switch"></span><strong data-online-label>{% if d.is_online %}Online{% else %}Offline{% endif %}</strong>
+      </label>
+    </div>
+
+    <div class="dz-gps" data-gps>
+      {% icon 'pin' 16 %}<span data-gps-text>{% if d.is_online %}Waiting for your location…{% else %}Go online to receive trip requests.{% endif %}</span>
+    </div>
+
+    <div class="dz-earn">
+      <div><small>Today</small><strong>{{ today.earned|naira }}</strong><span>{{ today.trips }} trip{{ today.trips|pluralize }}</span></div>
+      <div><small>Last 7 days</small><strong>{{ week_earned|naira }}</strong><span>earned</span></div>
+      <div><small>Rating</small><strong>{% if d.rating_avg %}{{ d.rating_avg|floatformat:2 }}{% else %}New{% endif %}</strong><span>{{ d.trips_count }} trips</span></div>
+    </div>
+
+    <div class="dz-job" data-job hidden>
+      <div class="dz-job-head"><span class="badge badge-brand" data-job-kind></span><strong data-job-fare></strong></div>
+      <div class="dz-job-route">
+        <div><i class="a"></i><div><small>Pickup</small><strong data-job-pickup></strong><span class="xs muted" data-job-pickup-dist></span></div></div>
+        <div data-job-drop-row><i class="b"></i><div><small>Drop-off</small><strong data-job-drop></strong><span class="xs muted" data-job-meta></span></div></div>
+      </div>
+      <p class="small mb-0" data-job-notes hidden></p>
+      <div class="dz-job-rider"><span class="dz-avatar sm" data-job-rider-initial></span><span data-job-rider></span><a class="icon-btn" data-job-call aria-label="Call rider">{% icon 'phone' 17 %}</a><a class="btn btn-sm" data-job-nav target="_blank" rel="noopener">{% icon 'external' 14 %} Navigate</a></div>
+      <div class="dz-job-actions" data-job-actions></div>
+    </div>
+
+    <div class="dz-idle" data-idle>
+      <div class="dz-radar small"><i></i><i></i><i></i>{% icon 'car' 18 %}</div>
+      <div><strong data-idle-title>{% if d.is_online %}Looking for trips nearby{% else %}You're offline{% endif %}</strong><small>Requests from riders near you appear here.</small></div>
+    </div>
+
+    {% if upcoming %}
+      <h3 class="pdp-h3">Upcoming bookings</h3>
+      {% for t in upcoming %}<div class="dz-mini-trip"><strong>{{ t.scheduled_for|date:'D j M, g:i A' }}</strong><span class="small muted">{{ t.get_kind_display }} · {{ t.hours }} h · {{ t.pickup_address|truncatechars:30 }}</span><span class="small">{{ t.fare_estimate|naira }}</span></div>{% endfor %}
+    {% endif %}
+    {% if recent %}
+      <h3 class="pdp-h3">Recent trips</h3>
+      {% for t in recent %}<div class="dz-mini-trip"><strong>{{ t.fare|naira }}</strong><span class="small muted">{{ t.pickup_address|truncatechars:24 }} → {{ t.dropoff_address|truncatechars:24 }}</span><span class="xs subtle">{{ t.completed_at|ago }}</span></div>{% endfor %}
+    {% endif %}
+    <p class="xs subtle mt-2">Keep this page open while you're online; it shares your location with your rider during a trip.</p>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}{% include 'driverzone/_maps_scripts.html' %}{% endblock %}

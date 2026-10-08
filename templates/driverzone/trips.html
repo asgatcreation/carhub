@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}My trips | CarHub rides{% endblock %}
+{% block content %}
+<div class="container section" style="padding-top:28px;max-width:960px">
+  <div class="row between row-wrap mb-2" style="align-items:flex-end">
+    <div><span class="eyebrow">{% icon 'steering' 14 %} Rides &amp; drivers</span><h1 class="mb-0" style="font-size:clamp(1.6rem,3vw,2.1rem)">My trips</h1>
+      <p class="muted mb-0">{{ count }} completed trip{{ count|pluralize }}{% if spent %} · {{ spent|naira }} spent{% endif %}</p></div>
+    <a class="btn btn-primary" href="{% url 'driverzone:home' %}">{% icon 'plus' 16 %} Book a trip</a>
+  </div>
+  {% for t in page_obj %}
+    <a class="card dz-trip-row" href="{{ t.get_absolute_url }}">
+      <div class="dz-trip-icon {{ t.kind }}">{% if t.kind == 'chauffeur' %}{% icon 'steering' 20 %}{% else %}{% icon 'car' 20 %}{% endif %}</div>
+      <div class="grow" style="min-width:0">
+        <div class="dz-trip-route"><span>{{ t.pickup_address }}</span>{% if t.dropoff_address %}{% icon 'arrow-right' 14 %}<span>{{ t.dropoff_address }}</span>{% endif %}</div>
+        <div class="xs muted">{% if t.scheduled_for %}{{ t.scheduled_for|date:'D j M Y, g:i A' }}{% else %}{{ t.created_at|date:'D j M Y, g:i A' }}{% endif %} · {{ t.get_kind_display }}{% if t.driver %} with {{ t.driver.name }}{% endif %}{% if t.distance_m %} · {{ t.distance_km }} km{% endif %}{% if t.hours %} · {{ t.hours }} h{% endif %}</div>
+      </div>
+      <div class="text-right">
+        <strong class="ink">{{ t.fare|naira }}</strong>
+        <div>{% if t.status == 'completed' %}<span class="badge badge-success">Completed</span>{% elif t.is_active %}<span class="badge badge-brand">{% if t.scheduled_for %}Booked{% else %}{{ t.get_status_display }}{% endif %}</span>{% else %}<span class="badge">{{ t.get_status_display }}</span>{% endif %}</div>
+      </div>
+    </a>
+  {% empty %}
+    <div class="empty"><div class="empty-icon">{% icon 'car' 28 %}</div><h3>No trips yet</h3><p>Book a ride or hire a chauffeur and it will show up here.</p><a class="btn btn-dark" href="{% url 'driverzone:home' %}">Book a trip</a></div>
+  {% endfor %}
+  {% include 'partials/pagination.html' with page=page_obj %}
+</div>
+{% endblock %}

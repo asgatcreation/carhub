@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}Trip {{ trip.number }} | CarHub rides{% endblock %}
+{% block head %}{% include 'driverzone/_maps_head.html' %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div class="dz-shell" data-dz-trip='{{ trip_json }}'>
+  <div class="dz-map" id="dz-map" aria-label="Live map"></div>
+
+  <aside class="dz-panel dz-trip-panel" aria-live="polite">
+    <div class="dz-panel-head">
+      <div>
+        <span class="eyebrow">{% icon 'steering' 14 %} {{ trip.get_kind_display }} · {{ trip.number }}</span>
+        <h1 data-live-label>{% if trip.scheduled_for and trip.status == 'accepted' %}Booking confirmed{% else %}{{ trip.get_status_display }}{% endif %}</h1>
+      </div>
+      <a class="icon-btn" href="{% url 'driverzone:trips' %}" aria-label="All trips">{% icon 'x' 20 %}</a>
+    </div>
+
+    <div class="dz-eta" data-eta hidden>
+      <div class="dz-eta-ring"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19"/><circle class="fg" cx="22" cy="22" r="19" data-eta-ring/></svg><strong data-eta-min>–</strong><small>min</small></div>
+      <div><strong data-eta-text>Your driver is on the way</strong><small data-eta-sub>Pickup at {{ trip.pickup_address|truncatechars:40 }}</small></div>
+    </div>
+    {% if trip.scheduled_for and trip.status == 'accepted' %}
+      <div class="dz-scheduled">{% icon 'calendar' 18 %}<div><strong>{{ trip.scheduled_for|date:'l j F, g:i A' }}</strong><small>Live tracking starts when your driver sets off.</small></div></div>
+    {% endif %}
+    <div class="dz-searching" data-searching {% if trip.status != 'requested' %}hidden{% endif %}>
+      <div class="dz-radar"><i></i><i></i><i></i>{% icon 'car' 20 %}</div>
+      <div><strong>Finding you a driver…</strong><small>Matching you with the nearest available {% if trip.kind == 'chauffeur' %}chauffeur{% else %}{{ trip.get_vehicle_class_display|lower }} driver{% endif %}</small></div>
+    </div>
+
+    <ol class="dz-steps" data-steps>
+      {% for label, state in trip.steps %}<li class="{{ state }}"><span></span>{{ label }}</li>{% endfor %}
+    </ol>
+
+    <div class="dz-driver" data-driver {% if not trip.driver or trip.status == 'requested' %}hidden{% endif %}>
+      <span class="dz-avatar lg" data-d-initials>{% if trip.driver %}{{ trip.driver.user|initials }}{% endif %}</span>
+      <div class="grow">
+        <strong data-d-name>{{ trip.driver.name }}</strong>
+        <div class="small muted"><span class="stars">{% icon 'star' 13 %}</span> <span data-d-rating>{{ trip.driver.rating_avg|floatformat:2 }}</span> · <span data-d-trips>{{ trip.driver.trips_count }}</span> trips</div>
+        <div class="dz-vehicle-row"><span data-d-vehicle>{{ trip.driver.vehicle }}</span><span class="dz-plate" data-d-plate>{{ trip.driver.plate_number }}</span></div>
+      </div>
+      {% if not is_driver and trip.driver.user.profile.phone %}<a class="icon-btn dz-call" href="tel:{{ trip.driver.user.profile.phone }}" aria-label="Call driver" data-d-call>{% icon 'phone' 18 %}</a>{% endif %}
+    </div>
+
+    <dl class="dz-facts">
+      <div><dt>{% icon 'pin' 14 %} Pickup</dt><dd>{{ trip.pickup_address }}</dd></div>
+      {% if trip.dropoff_address %}<div><dt>{% icon 'flag' 14 %} Drop-off</dt><dd>{{ trip.dropoff_address }}</dd></div>{% endif %}
+      {% if trip.kind == 'chauffeur' %}<div><dt>{% icon 'clock' 14 %} Booked for</dt><dd>{{ trip.hours }} hours{% if trip.scheduled_for %} from {{ trip.scheduled_for|date:'D j M, g:i A' }}{% endif %}</dd></div>
+      {% else %}<div><dt>{% icon 'road' 14 %} Distance</dt><dd>{{ trip.distance_km }} km · about {{ trip.duration_min }} min with traffic</dd></div>{% endif %}
+      <div><dt>{% icon 'card' 14 %} {% if trip.status == 'completed' %}Fare{% else %}Estimated fare{% endif %}</dt><dd><strong class="ink" data-fare>{{ trip.fare|naira }}</strong> · {{ trip.get_payment_method_display }}{% if trip.surge > 1 %} · busy-period pricing{% endif %}</dd></div>
+      {% if trip.notes %}<div><dt>{% icon 'message' 14 %} Note</dt><dd>“{{ trip.notes }}”</dd></div>{% endif %}
+    </dl>
+
+    {% if trip.simulated and trip.is_active and not trip.scheduled_for %}<p class="dz-demo-note" data-demo-note>{% icon 'zap' 13 %} Portfolio demo: this driver is simulated along the real road route, and time runs faster so the trip finishes in a couple of minutes.</p>{% endif %}
+
+    {% if trip.status in 'requested accepted arrived' and not is_driver %}
+      <details class="inline-panel dz-cancel" data-cancel-box>
+        <summary class="link-btn muted">Cancel trip</summary>
+        <form method="post" action="{% url 'driverzone:trip_cancel' trip.number %}" class="mt-1" data-confirm="Cancel this trip?">
+          {% csrf_token %}
+          <input class="input input-sm" name="reason" maxlength="200" placeholder="Reason (optional)">
+          <p class="xs muted mt-1 mb-1">Free until your driver arrives; a {{ cancel_fee|naira }} fee applies after that.</p>
+          <button class="btn btn-sm btn-danger">Cancel trip</button>
+        </form>
+      </details>
+    {% endif %}
+
+    <div class="dz-done" data-done {% if trip.status != 'completed' %}hidden{% endif %}>
+      <div class="dz-receipt">
+        <div class="dz-receipt-head">{% icon 'check-circle' 22 %}<div><strong>You've arrived</strong><small>{% if trip.completed_at %}{{ trip.completed_at|date:'j M, g:i A' }}{% endif %}</small></div><strong class="dz-receipt-total" data-fare>{{ trip.fare|naira }}</strong></div>
+        {% if trip.payment_method == 'cash' %}<p class="small muted mb-0">Pay {{ trip.driver.name|default:'your driver' }} in cash or by transfer.</p>{% endif %}
+      </div>
+      {% if not is_driver %}
+        {% if trip.rating %}
+          <div class="dz-rated"><span class="stars">{% for i in '12345' %}<svg class="icon {% if forloop.counter > trip.rating.stars %}off{% endif %}" width="20" height="20"><use href="#i-star"></use></svg>{% endfor %}</span><span>Thanks for rating {{ trip.driver.name }}!</span></div>
+        {% elif trip.driver %}
+          <form method="post" action="{% url 'driverzone:trip_rate' trip.number %}" class="dz-rate">
+            {% csrf_token %}
+            <strong>How was your trip with {{ trip.driver.name }}?</strong>
+            <div class="star-input" role="radiogroup" aria-label="Rating">{% for n in '54321' %}<input type="radio" id="tr-{{ n }}" name="stars" value="{{ n }}"><label for="tr-{{ n }}" title="{{ n }} star{{ n|pluralize }}"><svg class="icon" width="32" height="32"><use href="#i-star"></use></svg></label>{% endfor %}</div>
+            <div class="reason-chips">{% for c in compliments %}<label class="chip-check"><input type="checkbox" name="compliments" value="{{ c }}"><span>{{ c }}</span></label>{% endfor %}</div>
+            <input class="input input-sm" name="comment" maxlength="500" placeholder="Anything else? (optional)">
+            <div class="dz-tip-row"><span class="small muted">Add a tip</span>{% for t in '0,200,500,1000'|split:',' %}<label class="chip-check"><input type="radio" name="tip" value="{{ t }}" {% if t == '0' %}checked{% endif %}><span>{% if t == '0' %}No tip{% else %}₦{{ t }}{% endif %}</span></label>{% endfor %}</div>
+            <button class="btn btn-primary btn-block">Submit rating</button>
+          </form>
+        {% endif %}
+      {% endif %}
+      <a class="btn btn-block mt-1" href="{% url 'driverzone:home' %}">{% icon 'car' 16 %} Book another trip</a>
+    </div>
+
+    {% if trip.status == 'cancelled' or trip.status == 'no_driver' %}
+      <div class="notice {% if trip.status == 'no_driver' %}warning{% else %}info{% endif %} mt-2">{% icon 'info' 18 %}<div class="small">
+        {% if trip.status == 'no_driver' %}Sorry, no driver was free nearby. Please try again in a few minutes.{% else %}Cancelled by {{ trip.cancelled_by }}{% if trip.cancel_reason %}: {{ trip.cancel_reason }}{% endif %}.{% if trip.fare_final %} A {{ trip.fare_final|naira }} cancellation fee applies.{% endif %}{% endif %}
+      </div></div>
+      <a class="btn btn-dark btn-block mt-2" href="{% url 'driverzone:home' %}">Book again</a>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}{% include 'driverzone/_maps_scripts.html' %}{% endblock %}

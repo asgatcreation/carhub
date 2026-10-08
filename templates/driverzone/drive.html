@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Drive with CarHub{% endblock %}
+{% block content %}
+<section class="store-hero sell-hero">
+  <div class="container" style="position:relative;z-index:1;max-width:860px;text-align:center;padding-block:64px 72px">
+    <span class="hero-pill" style="margin-inline:auto">{% icon 'steering' 14 %} Drivers &amp; chauffeurs</span>
+    <h1>Drive with CarHub.<br><span class="hl">Earn on your schedule.</span></h1>
+    <p class="lead" style="margin-inline:auto">Take rides in your own car, or work as a chauffeur for car owners. A typical 8-hour chauffeur day earns around {{ earnings|naira }}.</p>
+  </div>
+</section>
+<div class="container section" style="max-width:1080px">
+  <div class="grid grid-3 sell-steps">
+    <div class="card card-pad"><span class="step-num">1</span><h3>Apply</h3><p class="muted mb-0">Share your licence and, if you have one, your car. We verify every driver within 2 working days.</p></div>
+    <div class="card card-pad"><span class="step-num">2</span><h3>Go online</h3><p class="muted mb-0">Open the driver app, go online and share your location. Nearby requests come straight to you.</p></div>
+    <div class="card card-pad"><span class="step-num">3</span><h3>Drive &amp; earn</h3><p class="muted mb-0">Accept, pick up, complete. Riders see your rating, and great ratings mean more trips.</p></div>
+  </div>
+  <div class="card mt-4" id="apply">
+    {% if not user.is_authenticated %}
+      <div class="card-pad text-center"><h2>Ready to drive?</h2><p class="muted">Create a free CarHub account or sign in, then complete a short application.</p>
+        <a class="btn btn-primary btn-lg" href="{% url 'account_signup' %}?next={% url 'driverzone:drive' %}%23apply">Create an account</a>
+        <a class="btn btn-lg" href="{% url 'account_login' %}?next={% url 'driverzone:drive' %}%23apply">Sign in</a></div>
+    {% elif application and application.status == 'pending' %}
+      <div class="card-pad"><div class="notice info">{% icon 'clock' 20 %}<div><strong>Your driver application is in review.</strong> Submitted {{ application.applied_at|date:'j M Y' }}. We'll email you when it's processed.</div></div></div>
+    {% else %}
+      {% if application.status == 'correction_requested' %}<div class="notice warning m-2">{% icon 'alert' 20 %}<div><strong>We need a few changes.</strong> Check your notifications, then submit again.</div></div>{% endif %}
+      <form method="post" enctype="multipart/form-data" novalidate data-busy>
+        {% csrf_token %}
+        <div class="form-section"><h3>{% icon 'user' 20 %} About you</h3>
+          <div class="form-grid">
+            {% include 'partials/field.html' with field=form.full_name %}
+            {% include 'partials/field.html' with field=form.phone %}
+            {% include 'partials/field.html' with field=form.experience_years %}
+            {% include 'partials/field.html' with field=form.id_number %}
+            <div class="span-2">{% include 'partials/field.html' with field=form.address %}</div>
+          </div>
+        </div>
+        <div class="form-section"><h3>{% icon 'car' 20 %} Your car &amp; licence</h3>
+          <div class="form-grid">
+            <div class="span-2">{% include 'partials/field.html' with field=form.vehicle_details %}</div>
+            <div class="span-2">{% include 'partials/field.html' with field=form.documents %}</div>
+            <div class="span-2">{% include 'partials/field.html' with field=form.additional_info %}</div>
+          </div>
+        </div>
+        <div class="form-section row between row-wrap"><span class="small muted">Reviewed within 2 working days.</span><button class="btn btn-dark btn-lg">Submit application</button></div>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

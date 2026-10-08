@@ -5,7 +5,7 @@ from django.urls import reverse
 
 class PageTests(TestCase):
     def test_public_pages_render(self):
-        for name in ('home', 'about', 'contact', 'cas:home', 'drivers', 'cars:browse', 'cars:sell', 'cars:cart', 'cars:saved'):
+        for name in ('home', 'about', 'contact', 'cas:home', 'driverzone:home', 'cars:browse', 'cars:sell', 'cars:cart', 'cars:saved'):
             self.assertEqual(self.client.get(reverse(name)).status_code, 200, name)
 
     def test_404_page(self):

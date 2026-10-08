@@ -171,6 +171,17 @@
 </section>
 {% endif %}
 
+<section class="section" style="padding-top:0" data-reveal>
+  <div class="container">
+    <div class="rides-band">
+      <div class="rb-icon">{% icon 'steering' 28 %}</div>
+      <div class="grow"><span class="eyebrow">{% icon 'pin' 14 %} Rides &amp; drivers</span><h2>Need a ride, or a driver for your car?</h2>
+        <p class="muted mb-0">Book a ride with live tracking, or hire a vetted chauffeur by the hour, in Lagos and Abuja.</p></div>
+      <div class="row row-wrap"><a class="btn btn-dark" href="{% url 'driverzone:home' %}">{% icon 'car' 18 %} Book a ride</a><a class="btn" href="{% url 'driverzone:home' %}?mode=chauffeur">Hire a chauffeur</a></div>
+    </div>
+  </div>
+</section>
+
 <section class="section" style="background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line)" data-reveal>
   <div class="container">
     <div class="section-head" style="justify-content:center;text-align:center">

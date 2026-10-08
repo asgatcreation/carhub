@@ -17,7 +17,7 @@ urlpatterns = [
     path('about/', core_views.about, name='about'),
     path('contact/', core_views.contact, name='contact'),
     path('accessories/', include('cas.urls')),
-    path('drivers/', core_views.coming_soon, {'section': 'drivers'}, name='drivers'),
+    path('drivers/', include('driverzone.urls')),
 
     path('cars/', include('cars.urls')),
     # Forgot password knows about Google-only accounts (must come before allauth's URLs).
@@ -31,7 +31,7 @@ urlpatterns = [
 
     # Old URLs kept as redirects
     path('cas/', RedirectView.as_view(pattern_name='cas:home')),
-    path('driverzone/', RedirectView.as_view(pattern_name='drivers')),
+    path('driverzone/', RedirectView.as_view(pattern_name='driverzone:home')),
     path('users/', RedirectView.as_view(pattern_name='users:dashboard')),
     path('users/<path:rest>', RedirectView.as_view(url='/account/%(rest)s')),
     path('login/', RedirectView.as_view(pattern_name='account_login')),

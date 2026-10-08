@@ -44,6 +44,9 @@ if RENDER_EXTERNAL_HOSTNAME:
     CSRF_TRUSTED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')
 
 # Absolute base URL for links inside emails (which are rendered outside a request).
+# DriverZone demo trips run this many times faster than real time so a trip finishes in a couple of minutes.
+DRIVERZONE_SIM_SPEED = int(os.environ.get('DRIVERZONE_SIM_SPEED', '10'))
+
 SITE_URL = (os.environ.get('SITE_URL') or (f'https://{RENDER_EXTERNAL_HOSTNAME}' if RENDER_EXTERNAL_HOSTNAME else 'http://localhost:8000')).rstrip('/')
 
 # ======================

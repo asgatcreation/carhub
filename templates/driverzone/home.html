@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block title %}Rides & drivers: book a ride or hire a chauffeur | CarHub{% endblock %}
+{% block head %}{% include 'driverzone/_maps_head.html' %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div class="dz-shell" data-dz-booking
+     data-quote-url="{% url 'driverzone:api_quote' %}" data-nearby-url="{% url 'driverzone:api_nearby' %}"
+     data-book-url="{% url 'driverzone:book' %}" data-login-url="{% url 'account_login' %}?next={{ request.path|urlencode }}"
+     data-authed="{{ user.is_authenticated|yesno:'1,0' }}" data-cities='{{ cities_json }}'>
+
+  <div class="dz-map" id="dz-map" aria-label="Map"></div>
+
+  <aside class="dz-panel" aria-label="Book a trip">
+    <div class="dz-panel-head">
+      <div>
+        <span class="eyebrow">{% icon 'steering' 14 %} Rides &amp; drivers</span>
+        <h1>Where to?</h1>
+      </div>
+      <div class="dz-city" role="group" aria-label="City">
+        <button type="button" class="is-active" data-city="Lagos">Lagos</button>
+        <button type="button" data-city="Abuja">Abuja</button>
+      </div>
+    </div>
+
+    {% if active_trip %}
+      <a class="dz-active" href="{{ active_trip.get_absolute_url }}">
+        <span class="dz-pulse"></span>
+        <div><strong>{% if active_trip.scheduled_for %}Upcoming booking{% else %}Trip in progress{% endif %}</strong><small>{% if active_trip.scheduled_for %}Confirmed for {{ active_trip.scheduled_for|date:"D j M, g:i A" }}{% else %}{{ active_trip.get_status_display }}{% endif %} · {{ active_trip.pickup_address|truncatechars:30 }}</small></div>
+        {% icon 'arrow-right' 18 %}
+      </a>
+    {% endif %}
+
+    <div class="dz-tabs" role="tablist">
+      <button type="button" role="tab" class="is-active" data-mode="ride" aria-selected="true">{% icon 'car' 17 %} Ride</button>
+      <button type="button" role="tab" data-mode="chauffeur" aria-selected="false">{% icon 'steering' 17 %} Hire a driver</button>
+    </div>
+    <p class="dz-mode-blurb" data-mode-blurb>A driver picks you up in their car.</p>
+
+    <div class="dz-route-inputs">
+      <div class="dz-line" aria-hidden="true"><i class="a"></i><i class="b"></i></div>
+      <div class="dz-field" data-place="pickup">
+        <label for="dz-pickup">Pickup</label>
+        <input id="dz-pickup" type="text" autocomplete="off" placeholder="Search or tap the map" spellcheck="false">
+        <button type="button" class="dz-locate" data-locate title="Use my location" aria-label="Use my location">{% icon 'pin' 17 %}</button>
+        <ul class="dz-suggest" role="listbox"></ul>
+      </div>
+      <div class="dz-field" data-place="dropoff">
+        <label for="dz-dropoff"><span data-drop-label>Destination</span></label>
+        <input id="dz-dropoff" type="text" autocomplete="off" placeholder="Where are you going?" spellcheck="false">
+        <button type="button" class="dz-swap" data-swap title="Swap" aria-label="Swap pickup and destination"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 4v16M7 4 4 7M7 4l3 3M17 20V4M17 20l-3-3M17 20l3-3"/></svg></button>
+        <ul class="dz-suggest" role="listbox"></ul>
+      </div>
+    </div>
+    <div class="dz-tip" data-map-tip>{% icon 'info' 14 %} Tip: tap the map to drop a pin, or drag the pins to adjust.</div>
+
+    <div class="dz-chauffeur-opts" data-chauffeur-opts hidden>
+      <div class="dz-hours">
+        <span>How long?</span>
+        <div class="qty-stepper sm" data-hours>
+          <button type="button" data-hours-dec aria-label="Fewer hours">{% icon 'minus' 14 %}</button>
+          <input type="number" value="3" min="3" max="12" aria-label="Hours" readonly>
+          <button type="button" data-hours-inc aria-label="More hours">{% icon 'plus' 14 %}</button>
+        </div>
+        <small data-hours-note>Minimum 3 hours · 10 hours is a full day</small>
+      </div>
+    </div>
+
+    <div class="dz-when">
+      <label class="dz-when-opt"><input type="radio" name="dz-when" value="now" checked> <span>{% icon 'zap' 15 %} Now</span></label>
+      <label class="dz-when-opt"><input type="radio" name="dz-when" value="later"> <span>{% icon 'calendar' 15 %} Schedule</span></label>
+      <input type="datetime-local" class="input input-sm" data-when-at hidden aria-label="Pickup date and time">
+    </div>
+
+    <div class="dz-quote" data-quote>
+      <div class="dz-empty" data-quote-empty>
+        <div class="dz-empty-art">{% icon 'pin' 22 %}</div>
+        <strong>Set your pickup to see prices</strong>
+        <small>{{ online_count }} driver{{ online_count|pluralize }} online now</small>
+      </div>
+      <div class="dz-summary" data-route-summary hidden></div>
+      {% if surge > 1 %}<div class="dz-surge" data-surge>{% icon 'trend' 14 %} Busy period: fares are a little higher right now.</div>{% endif %}
+      <div class="dz-options" data-options role="radiogroup" aria-label="Choose a ride"></div>
+    </div>
+
+    <div class="dz-book">
+      <div class="dz-pay">
+        <label for="dz-pay" class="sr-only">Payment</label>
+        <select id="dz-pay" class="input input-sm" data-pay>
+          <option value="cash">Cash or transfer to driver</option>
+          <option value="demo">Demo payment</option>
+        </select>
+        <input type="text" class="input input-sm" data-notes maxlength="300" placeholder="Note for the driver (optional)">
+      </div>
+      <button type="button" class="btn btn-primary btn-lg btn-block" data-book disabled>Choose pickup &amp; destination</button>
+      <p class="dz-error" data-book-error role="alert" hidden></p>
+    </div>
+  </aside>
+</div>
+
+<section class="section dz-below">
+  <div class="container">
+    <div class="grid grid-3 dz-how">
+      <div class="card card-pad"><span class="step-num">1</span><h3>Set your route</h3><p class="muted mb-0">Search any address or landmark, or drop a pin. We plan the route on real roads and show your fare before you book.</p></div>
+      <div class="card card-pad"><span class="step-num">2</span><h3>Watch your driver arrive</h3><p class="muted mb-0">See your driver's car move on the live map with a pickup countdown, their name, rating, car and plate.</p></div>
+      <div class="card card-pad"><span class="step-num">3</span><h3>Ride, pay, rate</h3><p class="muted mb-0">Track the trip to your destination, pay the driver by cash or transfer, and rate the ride.</p></div>
+    </div>
+
+    <div class="dz-safety">
+      <div><h2>Safety comes first</h2><p class="muted">Every driver is checked by our team before they can take a trip.</p></div>
+      <ul>
+        <li>{% icon 'verified' 20 %}<span><strong>Licence verified</strong> by the CarHub team</span></li>
+        <li>{% icon 'pin' 20 %}<span><strong>Live GPS tracking</strong> from pickup to drop-off</span></li>
+        <li>{% icon 'star' 20 %}<span><strong>Two-way ratings</strong>: low-rated drivers are removed</span></li>
+        <li>{% icon 'shield' 20 %}<span><strong>Plate &amp; photo</strong> shown before you get in</span></li>
+      </ul>
+    </div>
+
+    {% if chauffeurs %}
+    <div class="section-head mt-4"><div><h2>Top chauffeurs</h2><p>Hire a vetted driver for your own car, by the hour or for the day.</p></div><a class="link-arrow" href="{% url 'driverzone:drivers' %}">All chauffeurs {% icon 'arrow-right' 18 %}</a></div>
+    <div class="dz-chauffeurs">{% for d in chauffeurs %}{% include 'driverzone/_driver_card.html' %}{% endfor %}</div>
+    {% endif %}
+
+    <div class="cta-band mt-4">
+      <div><h2>Drive with CarHub</h2><p>Earn on your schedule driving riders, or as a chauffeur for car owners. Weekly payouts.</p></div>
+      <div class="row row-wrap"><a href="{% url 'driverzone:drive' %}" class="btn btn-primary btn-lg">{% icon 'steering' 20 %} Become a driver</a>
+        {% if user.driver_profile.license_verified %}<a href="{% url 'driverzone:dashboard' %}" class="btn btn-lg" style="--btn-bg:transparent;--btn-fg:#fff;--btn-line:rgba(255,255,255,.3)">Open driver app</a>{% endif %}</div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}{% include 'driverzone/_maps_scripts.html' %}{% endblock %}
