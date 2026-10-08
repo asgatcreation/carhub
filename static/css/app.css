@@ -1280,3 +1280,17 @@ form.inline { display: inline; margin: 0; }
   .qi-actions .input { min-width: 100%; }
 }
 .staff-login-card p .icon, .auth-card p .icon { display: inline-block; vertical-align: -2px; }
+
+/* Forgot password: choice screen for accounts that sign in with Google */
+.auth-icon.google-icon { background: var(--surface); border-color: var(--line); }
+.choice-stack { display: grid; gap: 10px; margin-top: 18px; }
+.choice-card { margin: 0; }
+.choice-card button { width: 100%; display: flex; align-items: center; gap: 14px; padding: 16px; text-align: left; border-radius: var(--radius-lg); border: 1.5px solid var(--line-strong); background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .1s; }
+.choice-card button:hover { border-color: var(--ink-2); box-shadow: var(--shadow); }
+.choice-card button:active { transform: translateY(1px); }
+.choice-card.is-recommended button { border-color: var(--brand); background: var(--brand-soft); }
+.choice-card > button > .icon { flex: none; color: var(--muted); }
+.choice-icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); flex: none; color: var(--ink); }
+.choice-text { flex: 1; display: grid; gap: 2px; }
+.choice-text strong { font-size: 1rem; }
+.choice-text small { color: var(--muted); font-size: .84rem; line-height: 1.4; }

@@ -6,6 +6,7 @@ from django.views.static import serve
 from django.views.generic import RedirectView
 
 from core import views as core_views
+from users.views_auth import CarHubPasswordResetView
 
 admin.site.site_header = 'CarHub administration'
 admin.site.site_title = 'CarHub admin'
@@ -19,6 +20,8 @@ urlpatterns = [
     path('drivers/', core_views.coming_soon, {'section': 'drivers'}, name='drivers'),
 
     path('cars/', include('cars.urls')),
+    # Forgot password knows about Google-only accounts (must come before allauth's URLs).
+    path('accounts/password/reset/', CarHubPasswordResetView.as_view(), name='account_reset_password'),
     path('accounts/', include('allauth.urls')),
     path('account/', include('users.urls')),
     path('staff/', include('core.staff_urls')),

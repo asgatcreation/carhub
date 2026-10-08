@@ -155,9 +155,20 @@ class PasswordResetMessagesTests(BaseTestCase):
         google_user = make_user('gmailer@example.com')
         google_user.set_unusable_password()
         google_user.save()
+        # First: recognised as a Google account and offered a choice, no email yet.
         resp = self.client.post(reverse('account_reset_password'), {'email': 'gmailer@example.com'})
+        self.assertContains(resp, 'You sign in with Google')
+        self.assertContains(resp, 'Create a password too')
+        self.assertEqual(len(mail.outbox), 0)
+        # Choosing "create a password" sends the code.
+        resp = self.client.post(reverse('account_reset_password'), {'email': 'gmailer@example.com', 'add_password': '1'})
         self.assertRedirects(resp, reverse('account_confirm_password_reset_code'))
         self.assertIn('sign in with Google', mail.outbox[0].alternatives[0][0])
+
+    def test_password_account_goes_straight_to_code(self):
+        resp = self.client.post(reverse('account_reset_password'), {'email': 'buyer@example.com'})
+        self.assertRedirects(resp, reverse('account_confirm_password_reset_code'))
+        self.assertEqual(len(mail.outbox), 1)
 
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend')
     def test_mail_outage_does_not_crash(self):
