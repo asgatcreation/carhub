@@ -1,0 +1,53 @@
+{% extends 'staff/base.html' %}
+{% block console_title %}Reviews{% endblock %}
+{% block crumb %} / Review queues{% endblock %}
+{% block heading %}Reviews{% endblock %}
+{% block account_content %}
+<p class="muted mt-0">Buyer reviews are hidden until a moderator publishes them. Reviewers are told either way, and sellers are told when a review goes live.</p>
+<div class="tabs-nav">
+  <a href="?status=pending" class="{% if status == 'pending' %}is-active{% endif %}">Awaiting <span class="badge" data-mod-count="pending">{{ counts.pending|default:0 }}</span></a>
+  <a href="?status=approved" class="{% if status == 'approved' %}is-active{% endif %}">Published <span class="badge" data-mod-count="approved">{{ counts.approved|default:0 }}</span></a>
+  <a href="?status=rejected" class="{% if status == 'rejected' %}is-active{% endif %}">Rejected <span class="badge" data-mod-count="rejected">{{ counts.rejected|default:0 }}</span></a>
+</div>
+
+{% for r in items %}
+  <article class="card queue-item" data-mod-item>
+    <div class="qi-head">
+      <span class="avatar">{{ r.reviewer|initials }}</span>
+      <div class="grow">
+        <strong class="ink">{{ r.reviewer.get_full_name|default:'Deleted user' }}</strong>
+        {% if r.verified_purchase %}<span class="badge badge-success">{% icon 'check' 12 %} Bought from this seller</span>{% else %}<span class="badge">No purchase on record</span>{% endif %}
+        <div class="xs muted">{{ r.reviewer.email }} · {{ r.reviewer_total }} review{{ r.reviewer_total|pluralize }} written · joined {{ r.reviewer.date_joined|date:'M Y' }}</div>
+      </div>
+      <div class="text-right">
+        <span class="stars">{% for i in '12345' %}<svg class="icon {% if forloop.counter > r.rating|floatformat:0|add:0 %}off{% endif %}" width="16" height="16"><use href="#i-star"></use></svg>{% endfor %}</span>
+        <div class="xs muted">{{ r.created_at|ago }}</div>
+      </div>
+    </div>
+    <div class="qi-body">
+      <div class="xs subtle">Review of <a class="link" href="{% url 'cars:seller_profile' r.profile.user_id %}" target="_blank" rel="noopener">{{ r.profile.display_name }}</a></div>
+      {% if r.title %}<h3 class="qi-title">{{ r.title }}</h3>{% endif %}
+      <p class="mb-0">{{ r.body|default:'(no text)' }}</p>
+      <div class="sub-scores">
+        <span>Communication <b>{{ r.communication }}</b></span><span>Professionalism <b>{{ r.professionalism }}</b></span>
+        <span>Punctuality <b>{{ r.punctuality }}</b></span><span>Car as described <b>{{ r.condition }}</b></span>
+      </div>
+      {% if r.flags %}<div class="checks">{% for tone, label in r.flags %}<span class="badge badge-{{ tone }}">{% icon 'alert' 12 %} {{ label }}</span>{% endfor %}</div>{% endif %}
+      {% if r.moderation_note %}<div class="notice danger small">{% icon 'info' 16 %}<div>Moderator note: {{ r.moderation_note }}</div></div>{% endif %}
+    </div>
+    {% if status == 'pending' %}
+      <form method="post" action="{% url 'staff:review_decide' r.pk %}" class="qi-actions" data-moderate>
+        {% csrf_token %}
+        <div class="reason-chips">{% for reason in reasons %}<button type="button" data-reason="{{ reason }}">{{ reason }}</button>{% endfor %}</div>
+        <div class="row row-wrap">
+          <input class="input grow" name="reason" placeholder="Reason (required to reject, sent to the reviewer)" maxlength="300">
+          <button name="decision" value="reject" class="btn btn-danger">Reject</button>
+          <button name="decision" value="approve" class="btn btn-dark">{% icon 'check' 16 %} Publish</button>
+        </div>
+      </form>
+    {% endif %}
+  </article>
+{% empty %}
+  <div class="empty"><div class="empty-icon">{% icon 'check-circle' 28 %}</div><h3>All caught up</h3><p>No {{ status }} reviews right now.</p></div>
+{% endfor %}
+{% endblock %}

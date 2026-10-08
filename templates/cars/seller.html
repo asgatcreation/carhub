@@ -114,9 +114,15 @@
         <p class="muted mt-1">No reviews yet.</p>
       {% endif %}
 
+      {% if my_review %}
+        <div class="notice {% if my_review.status == 'rejected' %}danger{% else %}info{% endif %} mt-2">{% icon 'clock' 18 %}<div class="small">
+          {% if my_review.status == 'pending' %}<strong>Your review is awaiting moderation.</strong> It will be published once our team has checked it.
+          {% else %}<strong>Your review wasn't published.</strong>{% if my_review.moderation_note %} {{ my_review.moderation_note }}{% endif %} You can edit it below and resubmit.{% endif %}
+        </div></div>
+      {% endif %}
       {% if user.is_authenticated and user != seller %}
         <div class="divider"></div>
-        <h3>Write a review</h3>
+        <h3>{% if my_review %}Edit your review{% else %}Write a review{% endif %}</h3>
         <form method="post" novalidate>
           {% csrf_token %}
           <div class="field">

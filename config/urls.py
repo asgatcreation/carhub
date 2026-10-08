@@ -21,6 +21,9 @@ urlpatterns = [
     path('cars/', include('cars.urls')),
     path('accounts/', include('allauth.urls')),
     path('account/', include('users.urls')),
+    path('staff/', include('core.staff_urls')),
+    # Every staff sign-in (including Django admin's) goes through the branded console login.
+    path('admin/login/', RedirectView.as_view(pattern_name='staff:login', query_string=True)),
     path('admin/', admin.site.urls),
 
     # Old URLs kept as redirects

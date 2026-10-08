@@ -58,8 +58,7 @@
             <a href="{% url 'users:settings' %}">{% icon 'settings' 18 %} Settings</a>
             {% if user.is_staff %}
               <div class="menu-sep"></div>
-              <a href="{% url 'cars:moderation' %}">{% icon 'moderation' 18 %} Moderation</a>
-              <a href="{% url 'admin:index' %}">{% icon 'lock' 18 %} Admin</a>
+              <a href="{% url 'staff:overview' %}">{% icon 'moderation' 18 %} Admin console</a>
             {% endif %}
             <div class="menu-sep"></div>
             <form method="post" action="{% url 'account_logout' %}">{% csrf_token %}
@@ -100,7 +99,7 @@
         <a href="{% url 'cars:my_listings' %}">{% icon 'list' 20 %} My listings</a>
         <a href="{% url 'cars:sales' %}">{% icon 'calendar' 20 %} Reservations</a>
         <a href="{% url 'users:settings' %}">{% icon 'settings' 20 %} Settings</a>
-        {% if user.is_staff %}<a href="{% url 'cars:moderation' %}">{% icon 'moderation' 20 %} Moderation</a>{% endif %}
+        {% if user.is_staff %}<a href="{% url 'staff:overview' %}">{% icon 'moderation' 20 %} Admin console</a>{% endif %}
       {% endif %}
       <a href="{% url 'about' %}">{% icon 'info' 20 %} About CarHub</a>
       <a href="{% url 'contact' %}">{% icon 'headset' 20 %} Contact</a>

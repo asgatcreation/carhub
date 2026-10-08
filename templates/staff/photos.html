@@ -1,0 +1,40 @@
+{% extends 'staff/base.html' %}
+{% block console_title %}Photos{% endblock %}
+{% block crumb %} / Review queues{% endblock %}
+{% block heading %}Photo checks{% endblock %}
+{% block actions %}
+  {% if items %}
+    <form method="post" action="{% url 'staff:photos_approve_all' %}" data-confirm="Approve all {{ items|length }} photos on this page?">
+      {% csrf_token %}{% for img in items %}<input type="hidden" name="ids" value="{{ img.pk }}">{% endfor %}
+      <button class="btn btn-sm">{% icon 'check' 15 %} Approve all</button>
+    </form>
+  {% endif %}
+{% endblock %}
+{% block account_content %}
+<p class="muted mt-0">Listings from new sellers are hidden until approved. Verified dealers' photos go live straight away, so they're spot-checked here. Removing a photo tells the seller why.</p>
+
+{% if items %}
+  <div class="photo-queue">
+    {% for img in items %}
+      <article class="card photo-card" data-mod-item>
+        <a class="pc-img" href="{{ img.src }}" target="_blank" rel="noopener"><img src="{{ img.src }}" alt="{{ img.car.full_title }}" loading="lazy" referrerpolicy="no-referrer"></a>
+        <div class="pc-body">
+          <a class="pc-title" href="{{ img.car.get_absolute_url }}" target="_blank" rel="noopener">{{ img.car.full_title }}</a>
+          <div class="xs muted">{{ img.car.created_by.profile.display_name|default:'Unknown seller' }} · {% if img.image %}uploaded{% else %}linked{% endif %} {{ img.created_at|ago }}</div>
+          <form method="post" action="{% url 'staff:photo_decide' img.pk %}" data-moderate data-reason-optional>
+            {% csrf_token %}
+            <input type="hidden" name="reason" value="">
+            <div class="reason-chips small-chips">{% for reason in reasons %}<button type="button" data-reason="{{ reason }}">{{ reason }}</button>{% endfor %}</div>
+            <div class="row" style="gap:6px">
+              <button name="decision" value="reject" class="btn btn-sm btn-danger grow">{% icon 'trash' 14 %} Remove</button>
+              <button name="decision" value="approve" class="btn btn-sm btn-dark grow">{% icon 'check' 14 %} Looks good</button>
+            </div>
+          </form>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty"><div class="empty-icon">{% icon 'image' 28 %}</div><h3>No photos to check</h3><p>New uploads on live listings will appear here.</p></div>
+{% endif %}
+{% endblock %}

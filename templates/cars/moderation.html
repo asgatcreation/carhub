@@ -1,10 +1,10 @@
-{% extends 'users/account_base.html' %}
-{% block title %}Listing moderation | CarHub{% endblock %}
+{% extends 'staff/base.html' %}
+{% block console_title %}Listings{% endblock %}
+{% block crumb %} / Review queues{% endblock %}
+{% block heading %}Listings{% endblock %}
+{% block actions %}<a href="{% url 'admin:cars_car_changelist' %}?approval_status__exact={{ status }}" class="btn btn-sm">{% icon 'external' 16 %} Open in admin</a>{% endblock %}
 {% block account_content %}
-<div class="row between row-wrap mb-2">
-  <div><h2 class="mb-0">Listing moderation</h2><p class="muted small mb-0">New sellers' listings wait here until a moderator approves them. Sellers are notified either way.</p></div>
-  <a href="{% url 'admin:cars_car_changelist' %}?approval_status__exact={{ status }}" class="btn btn-sm">{% icon 'external' 16 %} Open in admin</a>
-</div>
+<p class="muted mt-0">New sellers' listings stay hidden until a moderator approves them. Sellers are notified either way.</p>
 
 <div class="grid grid-3 mb-2 mod-stats" style="gap:12px">
   <a class="card stat-card" href="?status=pending" style="{% if status == 'pending' %}border-color:var(--ink){% endif %}"><span class="icon-wrap">{% icon 'clock' 20 %}</span><strong data-mod-count="pending">{{ counts.pending|default:0 }}</strong><span>Waiting for review</span></a>

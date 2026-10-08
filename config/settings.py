@@ -104,6 +104,7 @@ TEMPLATES = [
                 'core.context_processors.site_settings',
                 'core.context_processors.demo_logins',
                 'users.context_processors.notifications_processor',
+                'core.context_processors.staff_console',
             ],
             'builtins': ['core.templatetags.ui'],
         },
@@ -210,6 +211,8 @@ ACCOUNT_SIGNUP_FORM_CLASS = 'users.signup_form.CustomSignupForm'
 ACCOUNT_USER_DISPLAY = lambda user: user.get_full_name() or user.email
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ''
 ACCOUNT_ADAPTER = 'users.adapter.AccountAdapter'
+# Say plainly when an email has no account (forgot password / sign up). Rate limits still apply.
+ACCOUNT_PREVENT_ENUMERATION = False
 ACCOUNT_EMAIL_NOTIFICATIONS = True                    # 'your password was changed' security emails
 
 # One-time codes instead of links: a 6-character code is emailed to verify a new

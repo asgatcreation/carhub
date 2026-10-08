@@ -4,6 +4,6 @@
 <div class="auth-icon">{% icon 'info' 26 %}</div>
 <h1>Sign-in cancelled</h1>
 <p class="muted">No problem. You can continue with Google again or sign in with your email.</p>
-{% include 'partials/google_button.html' with divider='or' %}
+{% include 'partials/google_button.html' with bottom=False divider='or' %}
 <a class="btn btn-dark btn-lg btn-block" href="{% url 'account_login' %}">Sign in with email</a>
 {% endblock %}

@@ -16,8 +16,7 @@
     {% if not user.profile.is_car_seller_approved %}<a href="{% url 'users:apply_seller' %}" class="{% if '/account/verify' in path %}is-active{% endif %}">{% icon 'verified' 18 %} Get verified</a>{% endif %}
     {% if user.is_staff %}
       <div class="nav-label">Staff</div>
-      <a href="{% url 'cars:moderation' %}" class="{% if '/cars/moderation' in path %}is-active{% endif %}">{% icon 'moderation' 18 %} Listing moderation</a>
-      <a href="{% url 'users:applications' %}" class="{% if '/account/applications' in path %}is-active{% endif %}">{% icon 'users' 18 %} Seller applications</a>
+      <a href="{% url 'staff:overview' %}">{% icon 'moderation' 18 %} Admin console</a>
     {% endif %}
     <div class="nav-label">Account</div>
     <a href="{% url 'users:settings' %}" class="{% if '/account/settings' in path %}is-active{% endif %}">{% icon 'settings' 18 %} Settings</a>

@@ -1,8 +1,15 @@
+from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
 User = get_user_model()
+
+
+def verified_user(email):
+    user = User.objects.create_user(email=email, password='pass12345!')
+    EmailAddress.objects.create(user=user, email=email, verified=True, primary=True)
+    return user
 
 
 class AuthTests(TestCase):
@@ -17,7 +24,7 @@ class AuthTests(TestCase):
         self.assertTrue(hasattr(user, 'profile'))
 
     def test_login_and_logout(self):
-        User.objects.create_user(email='a@example.com', password='pass12345!')
+        verified_user('a@example.com')
         resp = self.client.post(reverse('account_login'), {'login': 'a@example.com', 'password': 'pass12345!'})
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(self.client.get(reverse('users:dashboard')).status_code, 200)
@@ -25,7 +32,7 @@ class AuthTests(TestCase):
         self.assertEqual(self.client.get(reverse('users:dashboard')).status_code, 302)
 
     def test_logout_requires_post(self):
-        User.objects.create_user(email='b@example.com', password='pass12345!')
+        verified_user('b@example.com')
         self.client.post(reverse('account_login'), {'login': 'b@example.com', 'password': 'pass12345!'})
         self.client.get(reverse('account_logout'))
         self.assertEqual(self.client.get(reverse('users:dashboard')).status_code, 200)

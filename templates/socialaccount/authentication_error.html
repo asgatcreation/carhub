@@ -4,6 +4,6 @@
 <div class="auth-icon danger">{% icon 'alert' 26 %}</div>
 <h1>Couldn't sign you in with Google</h1>
 <p class="muted">Google didn't complete the sign-in, perhaps because it was cancelled or took too long. Please try again, or use your email and password.</p>
-{% include 'partials/google_button.html' with label='Try Google again' divider='or' %}
+{% include 'partials/google_button.html' with label='Try Google again' bottom=False divider='or' %}
 <a class="btn btn-dark btn-lg btn-block" href="{% url 'account_login' %}">Sign in with email</a>
 {% endblock %}

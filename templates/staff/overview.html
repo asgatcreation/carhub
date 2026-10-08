@@ -1,0 +1,55 @@
+{% extends 'staff/base.html' %}
+{% block console_title %}Overview{% endblock %}
+{% block heading %}{{ greeting }}, {{ user.first_name|default:'there' }}{% endblock %}
+{% block account_content %}
+<p class="muted mt-0">{% now 'l j F' %} · {% if todo %}<strong class="ink">{{ todo }} item{{ todo|pluralize }}</strong> waiting for review.{% else %}All queues are clear. Nice work.{% endif %}
+  {% if oldest %}<span class="badge badge-warning ml-1">{% icon 'clock' 12 %} Oldest listing waiting {{ oldest.created_at|timesince }}</span>{% endif %}</p>
+
+<div class="queue-grid">
+  <a class="queue-card q-amber" href="{% url 'cars:moderation' %}">
+    <span class="q-icon">{% icon 'car' 22 %}</span>
+    <strong>{{ counts.listings }}</strong><span>Listings to approve</span>
+    <em>From new sellers, hidden until approved {% icon 'arrow-right' 14 %}</em>
+  </a>
+  <a class="queue-card q-blue" href="{% url 'staff:reviews' %}">
+    <span class="q-icon">{% icon 'star' 22 %}</span>
+    <strong>{{ counts.reviews }}</strong><span>Reviews to moderate</span>
+    <em>Published only after a check {% icon 'arrow-right' 14 %}</em>
+  </a>
+  <a class="queue-card q-violet" href="{% url 'staff:photos' %}">
+    <span class="q-icon">{% icon 'image' 22 %}</span>
+    <strong>{{ counts.photos }}</strong><span>Photos to check</span>
+    <em>New uploads on live listings {% icon 'arrow-right' 14 %}</em>
+  </a>
+  <a class="queue-card q-green" href="{% url 'staff:verifications' %}">
+    <span class="q-icon">{% icon 'verified' 22 %}</span>
+    <strong>{{ counts.verifications }}</strong><span>Verification requests</span>
+    <em>Dealers, drivers, vendors {% icon 'arrow-right' 14 %}</em>
+  </a>
+</div>
+
+<div class="console-cols">
+  <section class="card card-pad">
+    <div class="row between mb-2"><h2 class="console-h2 mb-0">Marketplace pulse</h2><span class="xs subtle">Live data</span></div>
+    <div class="pulse-grid">
+      <div><small>Live listings</small><strong>{{ pulse.live }}</strong></div>
+      <div><small>Active reservations</small><strong>{{ pulse.reservations }}</strong></div>
+      <div><small>Deposits held</small><strong>{{ pulse.deposits|naira_short }}</strong></div>
+      <div><small>Cars sold · 30 days</small><strong>{{ pulse.sold_30d }}</strong></div>
+      <div><small>New users · 7 days</small><strong>{{ pulse.new_users_7d }}</strong></div>
+      <div><small>Total users</small><strong>{{ pulse.users }}</strong></div>
+    </div>
+  </section>
+  <section class="card card-pad">
+    <h2 class="console-h2">Recent activity</h2>
+    <ol class="activity">
+      {% for when, kind, text, link in events %}
+        <li class="act-{{ kind }}">
+          <span class="act-dot"></span>
+          <div>{% if link %}<a href="{{ link }}">{{ text }}</a>{% else %}{{ text }}{% endif %}<small>{{ when|ago }}</small></div>
+        </li>
+      {% empty %}<li class="muted small">Nothing yet.</li>{% endfor %}
+    </ol>
+  </section>
+</div>
+{% endblock %}

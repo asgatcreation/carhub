@@ -64,7 +64,7 @@ class SellerVerificationTests(TestCase):
         self.assertEqual(app.status, 'pending')
 
         self.client.force_login(self.staff)
-        self.client.post(reverse('users:applications'), {'app_id': app.pk, 'action': 'approve'})
+        self.client.post(reverse('staff:verification_decide', args=[app.pk]), {'decision': 'approve'})
         self.user.profile.refresh_from_db()
         self.assertTrue(self.user.profile.is_verified)
         self.assertEqual(self.user.profile.company_name, 'One Motors')
@@ -72,4 +72,4 @@ class SellerVerificationTests(TestCase):
 
     def test_applications_page_is_staff_only(self):
         self.client.force_login(self.user)
-        self.assertEqual(self.client.get(reverse('users:applications')).status_code, 302)
+        self.assertEqual(self.client.get(reverse('staff:verifications')).status_code, 302)

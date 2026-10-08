@@ -7,7 +7,7 @@ services:
     runtime: python
     plan: free
     buildCommand: ./build.sh
-    startCommand: python manage.py migrate --noinput && python manage.py seed_demo --if-empty && daphne -b 0.0.0.0 -p $PORT config.asgi:application
+    startCommand: python manage.py migrate --noinput && python manage.py seed_demo --if-empty && python manage.py ensure_admin && daphne -b 0.0.0.0 -p $PORT config.asgi:application
     healthCheckPath: /
     envVars:
       - key: PYTHON_VERSION
@@ -37,4 +37,9 @@ services:
       - key: EMAIL_HOST_PASSWORD
         sync: false
       - key: BREVO_API_KEY
+        sync: false
+      # Your admin login for /staff/ and /admin/ (re-created on every deploy).
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
         sync: false

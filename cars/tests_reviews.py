@@ -32,8 +32,10 @@ class ReviewTests(BaseTestCase):
 
     def test_aggregates(self):
         other = make_user('other@example.com')
-        Review.objects.create(profile=self.dealer.profile, reviewer=self.buyer, rating=5, communication=5, body='ok great')
-        Review.objects.create(profile=self.dealer.profile, reviewer=other, rating=4, communication=4, body='good one')
+        Review.objects.create(profile=self.dealer.profile, reviewer=self.buyer, rating=5, communication=5, body='ok great', status='approved')
+        Review.objects.create(profile=self.dealer.profile, reviewer=other, rating=4, communication=4, body='good one', status='approved')
+        third = make_user('third@example.com')
+        Review.objects.create(profile=self.dealer.profile, reviewer=third, rating=1, body='not moderated yet')  # pending: excluded
         resp = self.client.get(self.url())
         self.assertAlmostEqual(float(resp.context['agg']['overall']), 4.5)
         self.assertEqual(resp.context['agg']['n'], 2)

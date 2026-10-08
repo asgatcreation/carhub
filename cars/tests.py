@@ -8,6 +8,7 @@ from decimal import Decimal
 from io import BytesIO
 from unittest import mock
 
+from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -27,6 +28,7 @@ TEMP_MEDIA = tempfile.mkdtemp(prefix='carhub-test-media-')
 
 def make_user(email, **profile):
     user = User.objects.create_user(email=email, password='pass12345!', first_name='Test', last_name=email.split('@')[0])
+    EmailAddress.objects.create(user=user, email=email, verified=True, primary=True)  # as after sign-up + code
     for key, value in profile.items():
         setattr(user.profile, key, value)
     if profile:

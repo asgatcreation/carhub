@@ -100,9 +100,9 @@ class PasswordResetByCodeTests(TestCase):
         self.assertContains(resp, 'data-otp')
 
     def test_unknown_email_gets_no_code(self):
-        self.client.post(reverse('account_reset_password'), {'email': 'nobody@example.com'})
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertNotRegex(mail.outbox[0].body, r'\b\d{6}\b')
+        resp = self.client.post(reverse('account_reset_password'), {'email': 'nobody@example.com'})
+        self.assertContains(resp, "couldn&#x27;t find a CarHub account")
+        self.assertEqual(len(mail.outbox), 0)
 
 
 class GoogleButtonTests(TestCase):

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}{% block console_title %}Admin console{% endblock %} | CarHub admin{% endblock %}
+{% block body_class %}console-body{% endblock %}
+{% block header %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block page %}
+<div class="console">
+  <aside class="console-side" aria-label="Admin navigation">
+    <a class="console-brand" href="{% url 'staff:overview' %}">
+      {% include 'partials/logo_mark.html' %}
+      <span>Car<em>Hub</em><small>Admin console</small></span>
+    </a>
+    <nav class="console-nav">
+      <div class="console-label">Workspace</div>
+      <a href="{% url 'staff:overview' %}" class="{% if section == 'overview' %}is-active{% endif %}">{% icon 'dashboard' 18 %}<span>Overview</span></a>
+      <div class="console-label">Review queues</div>
+      <a href="{% url 'cars:moderation' %}" class="{% if section == 'listings' %}is-active{% endif %}">{% icon 'car' 18 %}<span>Listings</span>{% if queue.listings %}<b>{{ queue.listings }}</b>{% endif %}</a>
+      <a href="{% url 'staff:reviews' %}" class="{% if section == 'reviews' %}is-active{% endif %}">{% icon 'star' 18 %}<span>Reviews</span>{% if queue.reviews %}<b>{{ queue.reviews }}</b>{% endif %}</a>
+      <a href="{% url 'staff:photos' %}" class="{% if section == 'photos' %}is-active{% endif %}">{% icon 'image' 18 %}<span>Photos</span>{% if queue.photos %}<b>{{ queue.photos }}</b>{% endif %}</a>
+      <a href="{% url 'staff:verifications' %}" class="{% if section == 'verifications' %}is-active{% endif %}">{% icon 'verified' 18 %}<span>Verifications</span>{% if queue.verifications %}<b>{{ queue.verifications }}</b>{% endif %}</a>
+      <div class="console-label">Tools</div>
+      {% if user.is_superuser %}<a href="{% url 'admin:index' %}">{% icon 'settings' 18 %}<span>Database admin</span></a>{% endif %}
+      <a href="{% url 'home' %}">{% icon 'external' 18 %}<span>View marketplace</span></a>
+    </nav>
+    <div class="console-user">
+      <span class="avatar">{{ user|initials }}</span>
+      <div><strong>{{ user.get_full_name|default:user.email }}</strong><small>{% if user.is_superuser %}Administrator{% else %}Moderator{% endif %}</small></div>
+      <form method="post" action="{% url 'account_logout' %}">{% csrf_token %}<input type="hidden" name="next" value="{% url 'staff:login' %}"><button class="icon-btn" title="Sign out" aria-label="Sign out">{% icon 'logout' 18 %}</button></form>
+    </div>
+  </aside>
+
+  <div class="console-main">
+    <header class="console-top">
+      <div>
+        <div class="console-crumb">Admin console{% block crumb %}{% endblock %}</div>
+        <h1>{% block heading %}Overview{% endblock %}</h1>
+      </div>
+      <div class="row" style="gap:8px">
+        {% block actions %}{% endblock %}
+        <button type="button" class="icon-btn theme-toggle" data-theme-toggle aria-label="Toggle dark mode" title="Toggle dark mode">
+          <svg class="icon i-moon" width="20" height="20" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
+          <svg class="icon i-sun" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+      </div>
+    </header>
+    <div class="console-content">
+      {% block account_content %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% endblock %}

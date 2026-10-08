@@ -157,27 +157,5 @@ def apply_seller(request):
 
 @staff_member_required
 def applications(request):
-    if request.method == 'POST':
-        app = get_object_or_404(Application, pk=request.POST.get('app_id'), status='pending')
-        action = request.POST.get('action')
-        if action in ('approve', 'reject'):
-            app.status = 'approved' if action == 'approve' else 'rejected'
-            app.reviewed_by = request.user
-            app.reviewed_at = timezone.now()
-            app.save()
-            if action == 'approve':
-                profile = app.user.profile
-                profile.is_car_seller_approved = True
-                profile.is_verified = True
-                if app.company_name and not profile.company_name:
-                    profile.company_name = app.company_name
-                profile.save()
-            Notification.objects.create(
-                user=app.user, actor=request.user, verb=f'application_{app.status}',
-                message=('You are now a verified seller — your listings go live instantly.' if action == 'approve'
-                         else 'Your seller verification was not approved. You can still list cars for review.'),
-            )
-            messages.success(request, f'Application {app.status}.')
-        return redirect('users:applications')
-    pending = Application.objects.filter(status='pending', role='car_seller').select_related('user')
-    return render(request, 'users/applications.html', {'applications': pending})
+    """Moved to the staff console."""
+    return redirect('staff:verifications')

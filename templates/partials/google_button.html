@@ -1,4 +1,5 @@
 {% if SOCIAL_LOGIN_ENABLED %}
+  {% if bottom %}<div class="auth-divider">{{ divider|default:'or' }}</div>{% endif %}
   <form method="post" action="{% url 'google_login' %}?process=login" class="google-form">
     {% csrf_token %}
     {% if redirect_field_value %}<input type="hidden" name="next" value="{{ redirect_field_value }}">{% endif %}
@@ -7,5 +8,5 @@
       <span>{{ label|default:'Continue with Google' }}</span>
     </button>
   </form>
-  <div class="auth-divider">{{ divider|default:'or use your email' }}</div>
+  {% if not bottom %}<div class="auth-divider">{{ divider|default:'or use your email' }}</div>{% endif %}
 {% endif %}

@@ -209,7 +209,7 @@ def car_detail(request, slug):
     seller_profile = getattr(seller, 'profile', None) if seller else None
     rating = None
     if seller_profile:
-        rating = seller_profile.reviews.aggregate(avg=Avg('rating'), n=Count('id'))
+        rating = seller_profile.reviews.approved().aggregate(avg=Avg('rating'), n=Count('id'))
 
     similar = list(Car.objects.public().exclude(pk=car.pk)
                    .filter(Q(body_type=car.body_type) | Q(brand=car.brand))
@@ -667,6 +667,7 @@ def moderation(request):
         car.seller_listings = listing_counts.get(car.created_by_id, 0)
     page.object_list = cars
     return render(request, 'cars/moderation.html', {
+        'section': 'listings',
         'page_obj': page,
         'status': status,
         'counts': dict(Car.objects.values_list('approval_status').annotate(n=Count('id'))),
@@ -716,8 +717,9 @@ def seller_profile(request, seller_id):
         if request.user == seller:
             messages.error(request, "You can't review yourself.")
         elif form.is_valid():
-            Review.objects.update_or_create(profile=profile, reviewer=request.user, defaults=form.cleaned_data)
-            messages.success(request, 'Thanks — your review has been published.')
+            Review.objects.update_or_create(profile=profile, reviewer=request.user,
+                                            defaults={**form.cleaned_data, 'status': 'pending', 'moderation_note': ''})
+            messages.success(request, 'Thanks! Your review will appear once our team has checked it, usually within a day.')
             return redirect(f'{request.path}#reviews')
 
     inventory = Car.objects.public().filter(created_by=seller)
@@ -728,7 +730,9 @@ def seller_profile(request, seller_id):
     listings = listings.prefetch_related('images')
     listings_page = Paginator(listings, 9).get_page(request.GET.get('page'))
     listings_page.object_list = services.annotate_insights(list(listings_page.object_list))
-    reviews = profile.reviews.select_related('reviewer').order_by('-created_at')
+    reviews = profile.reviews.approved().select_related('reviewer').order_by('-created_at')
+    my_review = (profile.reviews.filter(reviewer=request.user).exclude(status='approved').first()
+                 if request.user.is_authenticated else None)
     agg = reviews.aggregate(
         overall=Avg('rating'), communication=Avg('communication'), professionalism=Avg('professionalism'),
         punctuality=Avg('punctuality'), condition=Avg('condition'), n=Count('id'),
@@ -750,6 +754,7 @@ def seller_profile(request, seller_id):
         'sort': sort,
         'certifications': [c.strip() for c in profile.certifications.replace('\n', ',').split(',') if c.strip()],
         'reviews_page': Paginator(reviews, 5).get_page(request.GET.get('rpage')),
+        'my_review': my_review,
         'agg': agg,
         'breakdown': breakdown,
         'form': form,

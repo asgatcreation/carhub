@@ -7,7 +7,7 @@
 [![CI](https://github.com/asgatcreation/carhub/actions/workflows/ci.yml/badge.svg)](https://github.com/asgatcreation/carhub/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.13-3776AB?logo=python&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-5.2-0C4B33?logo=django&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-77%20passing-11845b)
+![Tests](https://img.shields.io/badge/tests-92%20passing-11845b)
 
 **[Live demo →](https://carhub-es73.onrender.com/)** &nbsp;·&nbsp; [Buyer journey](#the-buyer-journey) &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Run it locally](#run-it-locally) &nbsp;·&nbsp; [Architecture](#architecture)
 
@@ -51,6 +51,13 @@ Each step has a real status, notification and email behind it, from the deposit 
 | <img src="docs/screenshots/10-seller-storefront.jpg" alt="Seller storefront"> | <img src="docs/screenshots/14-dark-mode.jpg" alt="Dark mode"> |
 | **Seller storefront.** A public page with stats, inventory filtered by brand and sorted, recently sold cars, rating breakdowns and reviews. | **Dark mode.** Follows the system setting, with a toggle that remembers the visitor's choice. Built on the same design tokens. |
 
+### Admin console: everything public is checked first
+
+| | |
+| :-- | :-- |
+| <img src="docs/screenshots/15-admin-console.jpg" alt="Admin console overview"> | <img src="docs/screenshots/16-review-moderation.jpg" alt="Review moderation"> |
+| **Staff console at `/staff/`.** A branded sign-in that only lets staff through (Django admin's sign-in redirects here too). The overview shows each review queue, live marketplace numbers and recent activity. | **Review queues.** Listings, buyer reviews, new photos, and dealer, driver and vendor verifications. Reviews are flagged automatically when they contain phone numbers or links, and show whether the reviewer actually bought from the seller. Every decision notifies the person in-app and by email. |
+
 ### Accounts secured with one-time codes
 
 | | |
@@ -79,11 +86,12 @@ Every screen is designed for a 390px-wide phone first. Car sections become swipe
 - A public storefront with ratings broken down by category.
 
 **Staff**
-- A moderation workspace with quality checks, and seller-verification applications.
-- A customised Django admin with bulk approve/reject and order management.
+- A front-end admin console (`/staff/`) with its own branded sign-in, dark sidebar and live queue counts.
+- Pre-publication moderation of listings from new sellers and of every buyer review; spot checks of new photos; verification of dealers, drivers and accessory vendors (approve, reject or request changes).
+- The Django admin stays available to superusers for raw data work.
 
 **Accounts**
-- Email and password, or **Continue with Google**, which also signs in an existing account with the same email.
+- Email and password, or **Continue with Google**. Both lead to the same account: Google signs in an existing email account, and Google-only users can add a password through "Forgot password".
 - Email verification and password reset by one-time code, with security emails on password changes.
 - Sign-out keeps you on the page you were on, or sends you home from private pages.
 
@@ -98,7 +106,7 @@ Every screen is designed for a 390px-wide phone first. Car sections become swipe
 | Frontend | Server-rendered templates, a hand-written CSS design system (tokens, dark theme), vanilla JS with progressive enhancement |
 | Data | SQLite locally, Postgres via `DATABASE_URL` |
 | Hosting | Render (daphne ASGI), WhiteNoise static files |
-| Quality | 77 automated tests, GitHub Actions CI on Python 3.12 and 3.13 |
+| Quality | 92 automated tests, GitHub Actions CI on Python 3.12 and 3.13 |
 
 ## Architecture
 
@@ -145,7 +153,7 @@ All demo accounts use the password `CarHubDemo!2026`, and the sign-in page offer
 | --- | --- | --- |
 | Buyer | `buyer@carhub.demo` | Orders at every stage, saved cars, checkout, messages |
 | Verified dealer | `harborpoint@carhub.demo` | Reservations to confirm, a scheduled inspection, completed and cancelled sales |
-| Moderator (staff) | `moderator@carhub.demo` | Moderation workspace, seller applications |
+| Moderator (staff) | `moderator@carhub.demo` | Admin console at `/staff/`: listings, reviews, photos, verifications |
 
 The moderator is deliberately **not** a superuser. To restore fresh demo data, run `python manage.py seed_demo --reset`.
 
@@ -157,6 +165,7 @@ The moderator is deliberately **not** a superuser. To restore fresh demo data, r
 | Google sign-in | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Authorised redirect URI: `<your site>/accounts/google/login/callback/` |
 | Paystack | `PAYSTACK_SECRET_KEY` | Test keys work with Paystack's test cards. Webhook URL: `/cars/webhooks/paystack/` |
 | Live chat | `CHAT_WEBSOCKETS=True` + daphne | `runserver` falls back to polling |
+| Your admin login | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | `python manage.py ensure_admin` creates or updates the superuser. It runs on every Render start, because the demo database is rebuilt on each deploy. |
 
 ## Deploying to Render
 
@@ -168,7 +177,7 @@ The moderator is deliberately **not** a superuser. To restore fresh demo data, r
 python manage.py test
 ```
 
-77 tests cover:
+92 tests cover:
 - Search and filters, moderation visibility and price insight.
 - The guest → sign-in → checkout hand-off and the cart merge.
 - Each checkout step: date validation, the locked email, exact totals, demo and mocked Paystack payments, and a car reserved by someone else mid-checkout.

@@ -172,7 +172,7 @@ class Profile(models.Model):
     def get_overall_rating(self):
         """Compute average rating from related Review objects."""
         try:
-            qs = self.reviews.all()
+            qs = self.reviews.approved()
             if not qs.exists():
                 return None
             agg = qs.aggregate(models.Avg('rating'))
@@ -182,7 +182,7 @@ class Profile(models.Model):
 
     def review_count(self):
         try:
-            return self.reviews.count()
+            return self.reviews.approved().count()
         except Exception:
             return 0
 
@@ -295,11 +295,18 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 
 
+class ReviewQuerySet(models.QuerySet):
+    def approved(self):
+        return self.filter(status='approved')
+
+
 class Review(models.Model):
     """Generic review attached to a Profile (as seller/driver) or to a Car/Accessory via profile.
 
-    Ratings: overall + category breakdown.
+    Ratings: overall + category breakdown. New reviews wait for a moderator before they are public.
     """
+    STATUS_CHOICES = [('pending', 'Awaiting moderation'), ('approved', 'Published'), ('rejected', 'Rejected')]
+
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='reviews')
     reviewer = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=5.0)
@@ -310,6 +317,12 @@ class Review(models.Model):
     title = models.CharField(max_length=255, blank=True)
     body = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', db_index=True)
+    moderated_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='moderated_reviews')
+    moderated_at = models.DateTimeField(null=True, blank=True)
+    moderation_note = models.CharField(max_length=300, blank=True)
+
+    objects = ReviewQuerySet.as_manager()
 
     def __str__(self):
         return f"Review {self.id} for {self.profile.user.email} - {self.rating}"

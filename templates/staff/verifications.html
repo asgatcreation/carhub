@@ -1,0 +1,59 @@
+{% extends 'staff/base.html' %}
+{% block console_title %}Verifications{% endblock %}
+{% block crumb %} / Review queues{% endblock %}
+{% block heading %}Verifications{% endblock %}
+{% block account_content %}
+<p class="muted mt-0">Approve people before they get trusted badges: verified dealers' listings go live instantly, drivers can take bookings and vendors can sell accessories.</p>
+<div class="seg-tabs">
+  {% for r, label, icon, n in roles %}
+    <a href="?role={{ r }}" class="{% if role == r %}is-active{% endif %}">{% icon icon 16 %} {{ label }}{% if n %} <b>{{ n }}</b>{% endif %}</a>
+  {% endfor %}
+</div>
+<div class="tabs-nav">
+  <a href="?role={{ role }}&status=pending" class="{% if status == 'pending' %}is-active{% endif %}">Pending</a>
+  <a href="?role={{ role }}&status=correction_requested" class="{% if status == 'correction_requested' %}is-active{% endif %}">Changes requested</a>
+  <a href="?role={{ role }}&status=approved" class="{% if status == 'approved' %}is-active{% endif %}">Approved</a>
+  <a href="?role={{ role }}&status=rejected" class="{% if status == 'rejected' %}is-active{% endif %}">Rejected</a>
+</div>
+
+{% for app in items %}
+  <article class="card queue-item" data-mod-item>
+    <div class="qi-head">
+      <span class="avatar">{{ app.user|initials }}</span>
+      <div class="grow">
+        <strong class="ink">{{ app.full_name|default:app.user.get_full_name }}</strong>{% if app.company_name %} <span class="muted">· {{ app.company_name }}</span>{% endif %}
+        <div class="xs muted">{{ app.user.email }} · {{ app.phone|default:'no phone' }} · joined {{ app.user.date_joined|date:'M Y' }}</div>
+      </div>
+      <div class="text-right xs muted">Applied {{ app.applied_at|ago }}</div>
+    </div>
+    <div class="qi-body">
+      <dl class="facts-grid">
+        <div><dt>ID document</dt><dd>{{ app.id_type|default:'—'|upper }} {{ app.id_number }}</dd></div>
+        <div><dt>Experience</dt><dd>{{ app.experience_years }} year{{ app.experience_years|pluralize }}</dd></div>
+        <div><dt>{% if role == 'pilot' %}Vehicle{% else %}Address{% endif %}</dt><dd>{% if role == 'pilot' %}{{ app.vehicle_details|default:'—' }}{% else %}{{ app.address|default:'—' }}{% endif %}</dd></div>
+        <div><dt>Listings so far</dt><dd>{{ app.listings }}</dd></div>
+        <div><dt>Document</dt><dd>{% if app.documents %}<a class="link" href="{{ app.documents.url }}" target="_blank" rel="noopener">View file</a>{% else %}Not uploaded{% endif %}</dd></div>
+      </dl>
+      {% if app.additional_info %}<p class="small mb-0">“{{ app.additional_info }}”</p>{% endif %}
+      <div class="checks">
+        <span class="badge {% if app.id_number %}badge-success{% else %}badge-warning{% endif %}">{% if app.id_number %}{% icon 'check' 12 %} ID number given{% else %}{% icon 'alert' 12 %} No ID number{% endif %}</span>
+        <span class="badge {% if app.documents %}badge-success{% else %}badge-warning{% endif %}">{% if app.documents %}{% icon 'check' 12 %} Document attached{% else %}{% icon 'alert' 12 %} No document{% endif %}</span>
+        <span class="badge {% if app.phone %}badge-success{% else %}badge-warning{% endif %}">{% if app.phone %}{% icon 'check' 12 %} Phone given{% else %}{% icon 'alert' 12 %} No phone{% endif %}</span>
+      </div>
+    </div>
+    {% if status == 'pending' %}
+      <form method="post" action="{% url 'staff:verification_decide' app.pk %}" class="qi-actions" data-moderate>
+        {% csrf_token %}
+        <div class="row row-wrap">
+          <input class="input grow" name="reason" placeholder="Note to the applicant (required to reject or request changes)" maxlength="300">
+          <button name="decision" value="reject" class="btn btn-danger">Reject</button>
+          <button name="decision" value="correction" class="btn">Request changes</button>
+          <button name="decision" value="approve" class="btn btn-dark">{% icon 'verified' 16 %} Approve</button>
+        </div>
+      </form>
+    {% endif %}
+  </article>
+{% empty %}
+  <div class="empty"><div class="empty-icon">{% icon 'verified' 28 %}</div><h3>Nothing here</h3><p>No {{ role_label|lower }} with this status.</p></div>
+{% endfor %}
+{% endblock %}

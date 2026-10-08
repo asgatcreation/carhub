@@ -36,3 +36,14 @@ def demo_logins(request):
             ('Moderator', f'moderator@{DEMO_DOMAIN}', 'Review the listing queue'),
         ],
     }}
+
+
+def staff_console(request):
+    """Queue sizes for the staff console sidebar (only computed on console pages)."""
+    user = getattr(request, 'user', None)
+    if not (user and user.is_authenticated and user.is_staff):
+        return {}
+    if not request.path.startswith(('/staff/', '/cars/moderation')):
+        return {'is_staff_user': True}
+    from core.staff import queue_counts
+    return {'is_staff_user': True, 'queue': queue_counts()}

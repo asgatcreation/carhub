@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Admin sign in | CarHub{% endblock %}
+{% block body_class %}console-body{% endblock %}
+{% block header %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block page %}
+<div class="staff-login">
+  <div class="staff-login-art" aria-hidden="true">
+    <div class="grid-glow"></div>
+    <div class="staff-preview">
+      <h2>Everything that goes public, checked first.</h2>
+      <div class="sp-row"><span class="sp-dot amber">{% icon 'car' 16 %}</span><div><b>Listings</b><small>Photos, price checks and seller history before a car goes live</small></div></div>
+      <div class="sp-row"><span class="sp-dot blue">{% icon 'star' 16 %}</span><div><b>Reviews</b><small>Flags contact details and spam; publish or reject with a reason</small></div></div>
+      <div class="sp-row"><span class="sp-dot violet">{% icon 'image' 16 %}</span><div><b>Photos</b><small>Spot-check new uploads from dealers</small></div></div>
+      <div class="sp-row"><span class="sp-dot green">{% icon 'verified' 16 %}</span><div><b>Verifications</b><small>Dealers, drivers and accessory vendors</small></div></div>
+    </div>
+  </div>
+  <section class="staff-login-card">
+    <a class="console-brand" href="{% url 'home' %}">
+      {% include 'partials/logo_mark.html' %}
+      <span>Car<em>Hub</em><small>Admin console</small></span>
+    </a>
+    <h1>Staff sign in</h1>
+    <p class="muted">Moderate listings, reviews, photos and verifications before they reach buyers.</p>
+
+    <form method="post" novalidate data-busy class="auth-card" style="max-width:none">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      {% if form.non_field_errors %}<div class="notice danger mb-2">{% icon 'alert' 18 %}<div class="small">{{ form.non_field_errors|join:' ' }}</div></div>{% endif %}
+      <div class="field {% if form.login.errors %}has-error{% endif %}">
+        <label for="id_login">Work email</label>
+        <input type="email" name="login" id="id_login" autocomplete="username" required autofocus value="{{ form.login.value|default:'' }}" placeholder="you@carhub.ng">
+        {% for e in form.login.errors %}<p class="error">{{ e }}</p>{% endfor %}
+      </div>
+      <div class="field {% if form.password.errors %}has-error{% endif %}">
+        <div class="row between"><label for="id_password">Password</label><a class="link small" href="{% url 'account_reset_password' %}">Forgot password?</a></div>
+        <input type="password" name="password" id="id_password" autocomplete="current-password" required>
+        {% for e in form.password.errors %}<p class="error">{{ e }}</p>{% endfor %}
+      </div>
+      <button class="btn btn-primary btn-lg btn-block" type="submit">{% icon 'lock' 18 %} Sign in to console</button>
+    </form>
+
+    {% if demo_staff %}
+      <div class="demo-box mt-3">
+        <strong>{% icon 'zap' 14 %} Portfolio demo</strong>
+        <p class="mt-1 mb-1 muted">Try the console as the demo moderator:</p>
+        <button type="button" class="btn btn-sm btn-block" style="justify-content:space-between" data-demo-staff="{{ demo_staff.email }}" data-demo-password="{{ demo_staff.password }}">
+          <span><strong>Moderator</strong> <span class="muted">· {{ demo_staff.email }}</span></span>{% icon 'arrow-right' 16 %}
+        </button>
+      </div>
+    {% endif %}
+    <p class="xs subtle mt-3 mb-0">{% icon 'shield' 12 %} Staff accounts only. Sign-ins are rate-limited and logged.</p>
+    <a class="link small mt-1" href="{% url 'home' %}">← Back to CarHub</a>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.querySelectorAll('[data-demo-staff]').forEach((btn) => btn.addEventListener('click', () => {
+    const form = document.querySelector('.staff-login-card form');
+    form.login.value = btn.dataset.demoStaff;
+    form.password.value = btn.dataset.demoPassword;
+    form.requestSubmit();
+  }));
+</script>
+{% endblock %}

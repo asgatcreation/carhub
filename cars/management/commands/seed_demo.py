@@ -14,6 +14,7 @@ from pathlib import Path
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.sites.models import Site
+from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.test.utils import override_settings
@@ -87,6 +88,7 @@ class Command(BaseCommand):
         demo_users = User.objects.filter(email__endswith='@' + DEMO_DOMAIN)
         if demo_users.exists() and opts['if_empty']:
             self.stdout.write('Demo data already present — skipping.')
+            call_command('ensure_admin')
             return
         if demo_users.exists():
             if not opts['reset']:
@@ -104,7 +106,9 @@ class Command(BaseCommand):
             cars = self._cars()
             self._activity(cars)
             self._reservations(cars)
+            self._photo_queue(cars)
 
+        call_command('ensure_admin')  # the site owner's login survives demo resets
         self.stdout.write(self.style.SUCCESS(
             f'Seeded {Car.objects.count()} cars, {User.objects.count()} users. '
             f'Demo logins use @{DEMO_DOMAIN} emails — see README.md.'))
@@ -304,8 +308,24 @@ class Command(BaseCommand):
                     profile=dealer.profile, reviewer=reviewer, rating=score, title=title, body=body,
                     communication=min(5, score + rng.randint(0, 1)), professionalism=score,
                     punctuality=max(3, score - rng.randint(0, 1)), condition=min(5, score + rng.randint(-1, 1)),
+                    status='approved',
                 )
                 Review.objects.filter(pk=review.pk).update(created_at=timezone.now() - timedelta(days=rng.randint(3, 200)))
+
+        # Fresh reviews waiting in the moderation queue
+        waiting = [
+            ('Car was not as described', 'The listing said accident-free but my mechanic found repainted panels. '
+                                         'They did refund my deposit quickly, to be fair.', 2),
+            ('Smooth from chat to keys', 'Booked an inspection the same day and the car matched every photo.', 5),
+            ('Call me on 0803 000 0000 for cheaper cars!!!', 'Better deals on my page, message me directly.', 1),
+        ]
+        for (title, body, score), dealer, reviewer in zip(waiting, self.dealers[:3], self.buyers[2:]):
+            Review.objects.filter(profile=dealer.profile, reviewer=reviewer).delete()
+            review = Review.objects.create(
+                profile=dealer.profile, reviewer=reviewer, rating=score, title=title, body=body,
+                communication=score, professionalism=score, punctuality=score, condition=score,
+            )
+            Review.objects.filter(pk=review.pk).update(created_at=timezone.now() - timedelta(hours=rng.randint(1, 30)))
 
         # Buyer ↔ seller conversations (signals create notifications + response stats)
         threads = [
@@ -340,6 +360,19 @@ class Command(BaseCommand):
             experience_years=3, additional_info='I sell 3–5 cars a month and want my listings to go live faster.',
         )
         Notification.objects.create(user=self.admin, verb='application', message='New seller verification request from Femi Adebayo')
+        driver, vendor = self.private[1], self.private[2]
+        Application.objects.create(
+            user=driver, role='pilot', full_name=driver.get_full_name(), phone=driver.profile.phone,
+            id_type='drivers_licence', id_number='ENU-48213-AB', experience_years=9,
+            vehicle_details='2019 Toyota Corolla, grey, ENU-482-KJ', address='7 Ogui Road, Enugu',
+            additional_info='Nine years driving for a logistics firm. Available weekdays and for interstate trips.',
+        )
+        Application.objects.create(
+            user=vendor, role='cas_seller', full_name=vendor.get_full_name(), phone=vendor.profile.phone,
+            company_name='Danjuma Auto Parts', address='Plot 22, Garki Spare Parts Market, Abuja',
+            id_type='cac', id_number='BN 3381940', experience_years=6,
+            additional_info='Genuine Toyota and Honda parts, tyres and batteries.',
+        )
 
     # ------------------------------------------------------------------
     def _reserve(self, buyer, car, days_ago, note=''):
@@ -397,3 +430,13 @@ class Command(BaseCommand):
         type(sold).objects.filter(pk=sold.pk).update(completed_at=sold.inspection_at + timedelta(hours=3))
         cancelled = self._reserve(segun, take(harbor), 12)
         services.cancel_reservation(cancelled, segun, 'buyer', 'Found a car closer to home, sorry.')
+
+    def _photo_queue(self, cars):
+        """Seeded photos count as checked, except those on the three newest dealer listings,
+        which wait in the staff console's photo queue."""
+        from cars.models import CarImage
+        now = timezone.now()
+        CarImage.objects.update(reviewed_at=now)
+        fresh = sorted((c for c in cars if c.created_by in self.dealers and c.approval_status == 'approved'),
+                       key=lambda c: c.created_at, reverse=True)[:3]
+        CarImage.objects.filter(car__in=fresh).update(reviewed_at=None)

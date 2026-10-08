@@ -289,6 +289,11 @@ class CarImage(models.Model):
     license = models.CharField(max_length=60, blank=True)
     source_url = models.URLField(max_length=500, blank=True)
     display_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    # Staff photo check: new photos appear in the console until a moderator approves or removes them.
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='+')
 
     class Meta:
         ordering = ['display_order', 'id']

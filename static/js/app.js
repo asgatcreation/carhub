@@ -467,30 +467,39 @@
   document.addEventListener('click', (e) => {
     const chip = e.target.closest('[data-reason]');
     if (!chip) return;
-    const input = chip.closest('form').querySelector('[name=reason]');
+    const form = chip.closest('form');
+    const input = form.querySelector('[name=reason]');
     input.value = chip.dataset.reason;
-    input.focus();
+    $$('[data-reason]', form).forEach((c) => c.classList.toggle('is-picked', c === chip));
+    if (input.type !== 'hidden') input.focus();
   });
+  // Shared by listings, reviews, photos and verifications in the staff console.
   $$('form[data-moderate]').forEach((form) => form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const decision = e.submitter && e.submitter.value;
     const reason = form.querySelector('[name=reason]');
-    if (decision === 'reject' && !reason.value.trim()) {
-      reason.focus();
-      toast('Add a short reason so the seller knows what to fix.', { error: true });
+    const needsReason = (decision === 'reject' && !('reasonOptional' in form.dataset)) || decision === 'correction';
+    if (needsReason && !reason.value.trim()) {
+      if (reason.type !== 'hidden') reason.focus();
+      toast('Add a short reason so they know what to fix.', { error: true });
       return;
     }
+    const card = form.closest('[data-mod-item], .mod-card');
+    $$('button', form).forEach((b) => { b.disabled = true; });
     try {
-      await post(form.action, { decision, reason: reason.value });
-      const card = form.closest('.mod-card');
-      card.classList.add('is-done');
-      setTimeout(() => card.remove(), 300);
-      const counter = $(`[data-mod-count="${decision === 'approve' ? 'approved' : 'rejected'}"]`);
-      const pending = $('[data-mod-count="pending"]');
-      if (counter) counter.textContent = Number(counter.textContent) + 1;
-      if (pending) pending.textContent = Math.max(0, Number(pending.textContent) - 1);
-      toast(decision === 'approve' ? 'Listing approved and seller notified' : 'Listing rejected and seller notified');
+      await post(form.action, { decision, reason: reason ? reason.value : '' });
+      card.classList.add('is-done', decision === 'approve' ? 'done-ok' : 'done-no');
+      setTimeout(() => card.remove(), 320);
+      const bump = (key, by) => {
+        const el = $(`[data-mod-count="${key}"]`);
+        if (el) el.textContent = Math.max(0, Number(el.textContent) + by);
+      };
+      bump(decision === 'approve' ? 'approved' : 'rejected', 1);
+      bump('pending', -1);
+      const labels = { approve: 'Approved', reject: 'Rejected', correction: 'Changes requested' };
+      toast(`${labels[decision] || 'Done'}. They've been notified.`);
     } catch (err) {
+      $$('button', form).forEach((b) => { b.disabled = false; });
       toast(err.message, { error: true });
     }
   }));
